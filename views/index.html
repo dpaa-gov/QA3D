@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA3D - Quality Assurance 3D</title>
+    <meta name="description" content="3D model quality assurance via PCA + ICP registration against generated surfaces">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <h1>QA<span class="accent">3D</span></h1>
+            </div>
+            <span class="version-badge">v0.1.0</span>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="app-layout">
+                <!-- Left Panel: Controls -->
+                <div class="panel left-panel">
+                    <!-- Model Selection -->
+                    <div class="panel-section">
+                        <h3>Model</h3>
+                        <div class="file-selector">
+                            <input type="text" id="model-path" class="path-input" placeholder="Select a .xyzrgb file"
+                                readonly>
+                            <button id="browse-btn" class="btn btn-primary">Browse</button>
+                        </div>
+                    </div>
+
+                    <!-- Dimensions -->
+                    <div class="panel-section">
+                        <h3>Dimensions</h3>
+                        <div class="input-group">
+                            <label for="dim-x">X</label>
+                            <input type="number" id="dim-x" class="dim-input" min="0" step="0.1" value="20">
+                        </div>
+                        <div class="input-group">
+                            <label for="dim-y">Y</label>
+                            <input type="number" id="dim-y" class="dim-input" min="0" step="0.1" value="8.91">
+                        </div>
+                        <div class="input-group">
+                            <label for="dim-z">Z</label>
+                            <input type="number" id="dim-z" class="dim-input" min="0" step="0.1" value="34.90">
+                        </div>
+                        <div class="input-group">
+                            <label for="dim-d">D</label>
+                            <input type="number" id="dim-d" class="dim-input" min="0.01" step="0.01" value="0.1">
+                        </div>
+                    </div>
+
+                    <!-- Compare Button -->
+                    <div class="panel-section">
+                        <button id="compare-btn" class="btn btn-accent btn-full" disabled>
+                            ⚡ Compare
+                        </button>
+                        <button id="clear-btn" class="btn btn-warning btn-full hidden">
+                            Clear
+                        </button>
+                    </div>
+
+                    <!-- Results -->
+                    <div id="results-section" class="panel-section hidden">
+                        <h3>Results</h3>
+                        <div id="results-content" class="results-content">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: 3D Viewer -->
+                <div class="panel viewer-panel">
+                    <div class="viewer-toolbar">
+                        <button id="toggle-mode-btn" class="btn btn-secondary btn-small hidden">🎨 Dual Color</button>
+                    </div>
+                    <div id="viewer-container" class="viewer-container">
+                        <div class="viewer-placeholder">
+                            <span class="placeholder-icon">📦</span>
+                            <p>Select a model and compare to see results</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- File Browser Modal -->
+        <div id="browser-modal" class="modal">
+            <div class="modal-content browser-modal-content">
+                <div class="modal-header">
+                    <h2>Select .xyzrgb File</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="browser-path">
+                        <button id="parent-dir-btn" class="btn btn-secondary">↑ Parent</button>
+                        <input type="text" id="modal-current-path" class="path-input" value="/">
+                        <button id="go-to-path-btn" class="btn btn-secondary">Go</button>
+                    </div>
+                    <div id="directory-listing" class="directory-listing">
+                        <!-- Directory contents populated by JS -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="select-file-btn" class="btn btn-primary" disabled>Select File</button>
+                    <button class="btn btn-secondary modal-cancel">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="/js/viewer.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+
+</html>

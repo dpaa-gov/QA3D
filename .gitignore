@@ -1,0 +1,21 @@
+# Build artifacts
+dist/
+Manifest.toml
+.agent/
+
+# OS-level
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+
+# Julia
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+
+# Logs
+*.log
