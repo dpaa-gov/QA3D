@@ -19,3 +19,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Sysimage
+qa3d_sysimage.so
+dist/

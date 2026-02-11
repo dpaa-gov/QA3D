@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=QA3D
+Comment=Quality Assurance 3D
+Exec=bash -c 'cd "$(dirname "$(readlink -f "%k")")" && ./qa3d.sh'
+Icon=qa3d
+Terminal=false
+Type=Application
+Categories=Science;Education;
+StartupNotify=true

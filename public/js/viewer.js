@@ -120,10 +120,16 @@ const Viewer = (function () {
         storedData.scanCoordsF32 = scanCoords;
         storedData.surfCoordsF32 = surfCoords;
 
-        // Find global min/max for consistent scale
-        const allDists = scanDists.concat(surfDists);
-        const minDist = Math.min(...allDists);
-        const maxDist = Math.max(...allDists);
+        // Find global min/max for consistent scale (loop to avoid stack overflow with large arrays)
+        let minDist = Infinity, maxDist = -Infinity;
+        for (let i = 0; i < scanDists.length; i++) {
+            if (scanDists[i] < minDist) minDist = scanDists[i];
+            if (scanDists[i] > maxDist) maxDist = scanDists[i];
+        }
+        for (let i = 0; i < surfDists.length; i++) {
+            if (surfDists[i] < minDist) minDist = surfDists[i];
+            if (surfDists[i] > maxDist) maxDist = surfDists[i];
+        }
         storedData.minDist = minDist;
         storedData.maxDist = maxDist;
 

@@ -1,5 +1,5 @@
 @echo off
-rem QA3D Startup Script (Windows)
+REM QA3D Startup Script (development)
 
 cd /d "%~dp0"
 
@@ -8,4 +8,8 @@ echo.
 echo   Web UI: http://127.0.0.1:8000
 echo.
 
-julia --project=. app.jl
+if exist "dist\qa3d_sysimage.dll" (
+    julia --sysimage=dist\qa3d_sysimage.dll --project=. app.jl
+) else (
+    julia --project=. app.jl
+)

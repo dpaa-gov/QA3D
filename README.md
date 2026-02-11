@@ -2,11 +2,13 @@
 
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
 ![Julia](https://img.shields.io/badge/Julia-1.10+-blue)
-![Linux](https://img.shields.io/badge/Linux-supported-informational?logo=linux&logoColor=white)
-![Windows](https://img.shields.io/badge/Windows-supported-informational?logo=windows&logoColor=white)
+![Linux](https://img.shields.io/badge/Linux-passing-brightgreen?logo=linux&logoColor=white)
+![Windows](https://img.shields.io/badge/Windows-untested-lightgrey?logo=windows&logoColor=white)
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)
 
 Quality Assurance 3D application for comparing scanned models against generated reference surfaces. QA3D reads `.xyzrgb` scan files, generates a rectangular prism surface from user-specified dimensions, and registers the scan to the surface using PCA alignment and ICP.
+
+![QA3D Screenshot](screenshot.png)
 
 **Key Features:**
 - **XYZRGB Model Loading** — reads 3D scan data from `.xyzrgb` files
@@ -42,9 +44,15 @@ QA3D/
 │   ├── js/viewer.js           # Three.js 3D viewer
 │   └── favicon.svg            # App icon
 ├── build/                     # Sysimage build scripts
+├── data/                      # Example scan data
+│   └── block.xyzrgb           # Gauge block scan (73K points)
 ├── start.sh                   # Linux startup
 └── start.bat                  # Windows startup
 ```
+
+## Example Data
+
+The `data/` directory contains an example gauge block scan (`block.xyzrgb`, 73,254 points). Use dimensions **20 × 8.91 × 34.90 mm** when comparing.
 
 ## Installation
 
@@ -111,16 +119,32 @@ Use mouse to **orbit** (left-drag), **zoom** (scroll), and **pan** (right-drag).
 ## Building Distribution
 
 ```bash
-chmod +x build/package.sh
-./build/package.sh
+bash build/package.sh
 ```
 
-Creates a self-contained distribution in `dist/` with a precompiled sysimage for fast startup.
+This creates a self-contained bundle at `dist/QA3D-v{VERSION}-linux-x86_64.tar.gz` containing:
 
-## Acknowledgments
+- **Julia runtime** — no system Julia required on target machine
+- **Precompiled sysimage** — fast startup (~1s vs ~30s)
+- **Package depot** — all required Julia packages
+- **App source** — routes, views, public assets
+- **Launcher** — auto-detects Chrome/Chromium/Edge and opens in app mode
 
-- **Jeff Lynch** — concept and development
-- Built with [Genie.jl](https://genieframework.com/)
+### Deploying
+
+```bash
+tar xzf QA3D-v0.1.0-linux-x86_64.tar.gz
+cd QA3D-v0.1.0-linux-x86_64
+./qa3d.sh
+```
+
+### Development (no build needed)
+
+```bash
+./start.sh
+```
+
+Uses the sysimage from `dist/` if available, otherwise falls back to regular JIT compilation.
 
 ## Citation
 
