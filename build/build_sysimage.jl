@@ -1,50 +1,41 @@
-# Build QA3D sysimage for faster startup
-# Usage: julia --project=. build/build_sysimage.jl
+# Build QA3D as a standalone compiled application
+# Usage: julia build/build_sysimage.jl  (run from project root)
 #
-# Output: dist/qa3d_sysimage.so (Linux), dist/qa3d_sysimage.dll (Windows),
-#         dist/qa3d_sysimage.dylib (macOS)
+# Output: dist/QA3D-compiled/ (standalone application directory)
+# PackageCompiler is installed to the default Julia environment if missing.
 
-using PackageCompiler
-
-# Determine output extension based on platform
-const SYSIMAGE_EXT = if Sys.iswindows()
-    "dll"
-elseif Sys.isapple()
-    "dylib"
-else
-    "so"
+# Ensure PackageCompiler is available (not a project dependency)
+try
+    @eval using PackageCompiler
+catch
+    import Pkg
+    Pkg.add("PackageCompiler")
+    @eval using PackageCompiler
 end
 
 const PROJECT_DIR = dirname(@__DIR__)
 const DIST_DIR = joinpath(PROJECT_DIR, "dist")
-const SYSIMAGE_PATH = joinpath(DIST_DIR, "qa3d_sysimage.$SYSIMAGE_EXT")
+const APP_DIR = joinpath(DIST_DIR, "QA3D-compiled")
 
-# Create dist directory
-mkpath(DIST_DIR)
-
-const PACKAGES = [
-    :Genie,
-    :HTTP,
-    :JSON3,
-    :LinearAlgebra,
-    :MultivariateStats,
-    :NearestNeighbors,
-    :Statistics,
-]
-
-@info "Building QA3D sysimage..."
+@info "Building QA3D compiled application..."
 @info "  Project: $PROJECT_DIR"
-@info "  Output:  $SYSIMAGE_PATH"
+@info "  Output:  $APP_DIR"
 @info "  Platform: $(Sys.MACHINE)"
 @info ""
-@info "This may take 2-5 minutes..."
+@info "This may take 5-15 minutes..."
 
-create_sysimage(
-    PACKAGES;
-    sysimage_path=SYSIMAGE_PATH,
+# Remove previous build
+rm(APP_DIR, force=true, recursive=true)
+
+create_app(
+    PROJECT_DIR,
+    APP_DIR;
+    executables=["qa3d" => "julia_main"],
     precompile_execution_file=joinpath(@__DIR__, "precompile_script.jl"),
-    project=PROJECT_DIR,
+    include_lazy_artifacts=true,
+    incremental=true,
+    force=true,
 )
 
-@info "Sysimage built successfully: $SYSIMAGE_PATH"
-@info "Size: $(round(filesize(SYSIMAGE_PATH) / 1024 / 1024, digits=1)) MB"
+@info "Compiled app built successfully: $APP_DIR"
+@info "Executable: $(joinpath(APP_DIR, "bin", Sys.iswindows() ? "qa3d.exe" : "qa3d"))"

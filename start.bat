@@ -1,15 +1,5 @@
 @echo off
-REM QA3D Startup Script (development)
-
+REM QA3D Development Startup
 cd /d "%~dp0"
-
-echo Starting QA3D...
-echo.
-echo   Web UI: http://127.0.0.1:8000
-echo.
-
-if exist "dist\qa3d_sysimage.dll" (
-    julia --sysimage=dist\qa3d_sysimage.dll --project=. app.jl
-) else (
-    julia --project=. app.jl
-)
+julia --project=. -e "using QA3D; QA3D.APP_ROOT[] = pwd(); QA3D.start_server()"
+pause

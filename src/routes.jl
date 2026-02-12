@@ -3,37 +3,39 @@ using .XYZRGBReader
 using .SurfaceGenerator
 using .Registration
 
+function setup_routes()
+
 # Heartbeat monitoring — auto-shutdown when browser closes
-const HEARTBEAT_TIMEOUT = 15.0
+HEARTBEAT_TIMEOUT = 15.0
 last_heartbeat = Ref(Base.time())
 heartbeat_active = Ref(false)
 
 # Serve main page
 route("/") do
-    Genie.Renderer.respond(read(joinpath(@__DIR__, "views", "index.html"), String), "text/html")
+    Genie.Renderer.respond(read(joinpath(APP_ROOT[], "views", "index.html"), String), "text/html")
 end
 
 route("/favicon.svg") do
-    filepath = joinpath(@__DIR__, "public", "favicon.svg")
+    filepath = joinpath(APP_ROOT[], "public", "favicon.svg")
     isfile(filepath) && return Genie.Renderer.respond(read(filepath, String), "image/svg+xml")
     Genie.Renderer.respond("", 404)
 end
 
 # Serve static files
 route("/css/:file") do
-    filepath = joinpath(@__DIR__, "public", "css", payload(:file))
+    filepath = joinpath(APP_ROOT[], "public", "css", payload(:file))
     isfile(filepath) && return Genie.Renderer.respond(read(filepath, String), "text/css")
     Genie.Renderer.respond("Not found", 404)
 end
 
 route("/js/:file") do
-    filepath = joinpath(@__DIR__, "public", "js", payload(:file))
+    filepath = joinpath(APP_ROOT[], "public", "js", payload(:file))
     isfile(filepath) && return Genie.Renderer.respond(read(filepath, String), "application/javascript")
     Genie.Renderer.respond("Not found", 404)
 end
 
 route("/images/:file") do
-    filepath = joinpath(@__DIR__, "public", "images", payload(:file))
+    filepath = joinpath(APP_ROOT[], "public", "images", payload(:file))
     if isfile(filepath)
         content = read(filepath)
         return HTTP.Response(200,
@@ -169,3 +171,5 @@ route("/api/heartbeat", method=POST) do
     end
     return json(Dict("ok" => true))
 end
+
+end # setup_routes

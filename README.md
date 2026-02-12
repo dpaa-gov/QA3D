@@ -16,7 +16,6 @@ Quality Assurance 3D application for comparing scanned models against generated 
 - **Auto-Density Calculation** — automatically matches surface point density to the scan
 - **PCA + ICP Registration** — point-to-point ICP with 8-axis reflection search
 - **3D Visualization** — interactive Three.js viewer with distance heatmap and dual-color modes
-- Cross-platform (Linux/Windows) with sysimage packaging
 
 ## Architecture
 
@@ -31,9 +30,9 @@ Quality Assurance 3D application for comparing scanned models against generated 
 
 ```
 QA3D/
-├── app.jl                     # Genie server entry point
-├── routes.jl                  # API routes
-├── lib/
+├── src/
+│   ├── QA3D.jl               # Module entry point
+│   ├── routes.jl              # API routes
 │   ├── xyzrgb_reader.jl       # .xyzrgb file parser
 │   ├── surface_generator.jl   # Box surface point generator
 │   └── registration.jl        # PCA + point-to-point ICP
@@ -43,11 +42,11 @@ QA3D/
 │   ├── js/app.js              # Frontend logic
 │   ├── js/viewer.js           # Three.js 3D viewer
 │   └── favicon.svg            # App icon
-├── build/                     # Sysimage build scripts
+├── build/                     # Packaging scripts
 ├── data/                      # Example scan data
 │   └── block.xyzrgb           # Gauge block scan (73K points)
-├── start.sh                   # Linux startup
-└── start.bat                  # Windows startup
+├── start.sh                   # Linux dev startup
+└── start.bat                  # Windows dev startup
 ```
 
 ## Example Data
@@ -78,7 +77,7 @@ chmod +x start.sh
 start.bat
 ```
 
-App will be available at http://127.0.0.1:8000
+The browser will open automatically when the server is ready at http://127.0.0.1:8000
 
 ## Usage
 
@@ -118,33 +117,55 @@ Use mouse to **orbit** (left-drag), **zoom** (scroll), and **pan** (right-drag).
 
 ## Building Distribution
 
+Builds a standalone compiled executable using PackageCompiler `create_app`. No Julia installation required on the target machine.
+
+### Build Prerequisites
+
+- Julia 1.10+ (build machine only)
+- All project dependencies installed (`julia --project=. -e "using Pkg; Pkg.instantiate()"`)
+
+### Build Steps
+
+**Linux:**
 ```bash
 bash build/package.sh
 ```
+Output: `dist/QA3D-v0.1.0-linux-x86_64.tar.gz`
 
-This creates a self-contained bundle at `dist/QA3D-v{VERSION}-linux-x86_64.tar.gz` containing:
+**Windows:**
+```cmd
+build\package.bat
+```
+Output: `dist\QA3D-v0.1.0-windows-x86_64.zip`
 
-- **Julia runtime** — no system Julia required on target machine
-- **Precompiled sysimage** — fast startup (~1s vs ~30s)
-- **Package depot** — all required Julia packages
-- **App source** — routes, views, public assets
-- **Launcher** — auto-detects Chrome/Chromium/Edge and opens in app mode
+Build time is approximately 5–15 minutes. The bundle includes a compiled `qa3d` executable, Julia runtime, all packages with artifacts, and web assets.
 
 ### Deploying
 
+**Linux:**
 ```bash
 tar xzf QA3D-v0.1.0-linux-x86_64.tar.gz
 cd QA3D-v0.1.0-linux-x86_64
-./qa3d.sh
+bin/qa3d
 ```
+
+**Windows:**
+```cmd
+REM Extract the zip, then:
+cd QA3D-v0.1.0-windows-x86_64
+bin\qa3d.exe
+```
+
+The browser opens automatically at http://127.0.0.1:8000. The executable can be launched from the terminal or by double-clicking.
 
 ### Development (no build needed)
 
 ```bash
-./start.sh
+./start.sh    # Linux
+start.bat     # Windows
 ```
 
-Uses the sysimage from `dist/` if available, otherwise falls back to regular JIT compilation.
+Runs from source using JIT compilation. The browser opens automatically when the server is ready.
 
 ## Citation
 
