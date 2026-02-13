@@ -3,7 +3,7 @@
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
 ![Julia](https://img.shields.io/badge/Julia-1.10+-blue)
 ![Linux](https://img.shields.io/badge/Linux-passing-brightgreen?logo=linux&logoColor=white)
-![Windows](https://img.shields.io/badge/Windows-untested-lightgrey?logo=windows&logoColor=white)
+![Windows](https://img.shields.io/badge/Windows-failing-red?logo=windows&logoColor=white)
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)
 
 Quality Assurance 3D application for comparing scanned models against generated reference surfaces. QA3D reads `.xyzrgb` scan files, generates a rectangular prism surface from user-specified dimensions, and registers the scan to the surface using PCA alignment and ICP.
@@ -176,6 +176,11 @@ Runs from source using JIT compilation. The browser opens automatically when the
 ## Citation
 
 Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 0.1.0. Defense POW/MIA Accounting Agency, Offutt AFB, NE.
+
+## TODO
+
+- [ ] Windows installer for the compiled app
+- [ ] Windows compiled app does not work — check for path handling issues
 
 ## License
 
