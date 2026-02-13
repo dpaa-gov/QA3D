@@ -9,6 +9,7 @@ function setup_routes()
 HEARTBEAT_TIMEOUT = 15.0
 last_heartbeat = Ref(Base.time())
 heartbeat_active = Ref(false)
+comparing = Ref(false)  # pause heartbeat monitor during ICP
 
 # Serve main page
 route("/") do
@@ -100,7 +101,21 @@ route("/api/browse", method=POST) do
     return json(Dict("entries" => entries, "currentPath" => path))
 end
 
-# Run comparison — stub for now
+# Serve temp data files for viewer — bypass Genie's response pipeline
+route("/data/:file") do
+    filepath = joinpath(APP_ROOT[], "data", payload(:file))
+    if isfile(filepath)
+        content = read(filepath)  # raw bytes
+        rm(filepath; force=true)
+        return HTTP.Response(200,
+            ["Content-Type" => "application/json",
+             "Content-Length" => string(length(content))],
+            body = content)
+    end
+    Genie.Renderer.respond("Not found", 404)
+end
+
+# Run comparison
 route("/api/compare", method=POST) do
     data = jsonpayload()
     filepath = get(data, "filepath", "")
@@ -118,6 +133,8 @@ route("/api/compare", method=POST) do
         return json(Dict("error" => "All dimensions and density must be positive"))
     end
 
+    # Pause heartbeat monitor — ICP is CPU-bound with no yield points in sysimage
+    comparing[] = true
     try
         # Read scan model (xyz only, discard rgb)
         scan_coords = read_xyzrgb(filepath)
@@ -126,13 +143,10 @@ route("/api/compare", method=POST) do
         surface = generate_surface(Float64(dim_x), Float64(dim_y), Float64(dim_z), Float64(density))
 
         # Run PCA + ICP registration with 8-reflection search
-        result = register(scan_coords, surface)
+        result = register(scan_coords, surface; data_dir=joinpath(APP_ROOT[], "data"))
 
-        # Return metrics + point cloud data for 3D visualization
-        scan_reg = result["scan_registered"]
-        surf = result["surface"]
-
-        return json(Dict(
+        # Build response — includes dataFile path when viewer is enabled
+        response = Dict(
             "success" => true,
             "scanPoints" => size(scan_coords, 1),
             "surfacePoints" => size(surface, 1),
@@ -140,16 +154,22 @@ route("/api/compare", method=POST) do
             "bestDistance" => result["best_distance"],
             "bestReflection" => result["best_reflection"],
             "meanAtoB" => result["mean_a_to_b"],
-            "meanBtoA" => result["mean_b_to_a"],
-            # Flat coordinate arrays for Three.js BufferGeometry
-            "scanCoords" => vec(scan_reg'),
-            "surfCoords" => vec(surf'),
-            "scanDistances" => result["scan_distances"],
-            "surfDistances" => result["surface_distances"]
-        ))
+            "meanBtoA" => result["mean_b_to_a"]
+        )
+
+        # Pass through dataFile path if register() wrote one
+        if haskey(result, "dataFile")
+            response["dataFile"] = result["dataFile"]
+        end
+
+        return json(response)
     catch e
         @error "Compare error" exception=(e, catch_backtrace())
         return json(Dict("error" => string(e)))
+    finally
+        # Resume heartbeat monitor and refresh timestamp
+        comparing[] = false
+        last_heartbeat[] = Base.time()
     end
 end
 
@@ -162,8 +182,9 @@ route("/api/heartbeat", method=POST) do
         @async begin
             while true
                 sleep(5)
-                if heartbeat_active[] && (Base.time() - last_heartbeat[] > HEARTBEAT_TIMEOUT)
-                    @info "No heartbeat — shutting down..."
+                elapsed = Base.time() - last_heartbeat[]
+                if heartbeat_active[] && !comparing[] && elapsed > HEARTBEAT_TIMEOUT
+                    @info "Heartbeat monitor triggered shutdown" elapsed_sec=round(elapsed; digits=1) comparing=comparing[]
                     ccall(:_exit, Cvoid, (Cint,), 0)
                 end
             end

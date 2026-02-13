@@ -23,7 +23,7 @@
     const toggleModeBtn = document.getElementById('toggle-mode-btn');
 
     // Initialize 3D viewer
-    Viewer.init('viewer-container');
+    if (typeof Viewer !== 'undefined') Viewer.init('viewer-container');
 
     // Modal elements
     const modal = document.getElementById('browser-modal');
@@ -195,6 +195,7 @@
         compareBtn.textContent = '⏳ Comparing...';
 
         try {
+            // Step 1: Run comparison — returns scalar metrics + data file path
             const res = await fetch('/api/compare', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -213,7 +214,7 @@
                 return;
             }
 
-
+            // Display metrics immediately
             resultsSection.classList.remove('hidden');
             resultsContent.innerHTML = `
                 <div class="result-row">
@@ -243,10 +244,14 @@
             `;
 
             clearBtn.classList.remove('hidden');
-            toggleModeBtn.classList.remove('hidden');
 
-            // Load 3D viewer
-            Viewer.loadResults(data);
+            // Fetch point cloud data if viewer is enabled
+            if (data.dataFile && typeof Viewer !== 'undefined') {
+                toggleModeBtn.classList.remove('hidden');
+                const cloudRes = await fetch(data.dataFile);
+                const cloudData = await cloudRes.json();
+                Viewer.loadResults(cloudData);
+            }
         } catch (e) {
             alert('Error: ' + e.message);
         } finally {
@@ -268,13 +273,13 @@
         resultsSection.classList.add('hidden');
         clearBtn.classList.add('hidden');
         toggleModeBtn.classList.add('hidden');
-        Viewer.clear();
+        if (typeof Viewer !== 'undefined') Viewer.clear();
         updateCompareState();
     });
 
     // ── Toggle viewer mode ──────────────────────────
     toggleModeBtn.addEventListener('click', () => {
-        const mode = Viewer.toggleMode();
+        const mode = typeof Viewer !== 'undefined' ? Viewer.toggleMode() : 'heatmap';
         toggleModeBtn.textContent = mode === 'heatmap' ? '🎨 Dual Color' : '🌡️ Heatmap';
     });
 

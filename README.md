@@ -167,6 +167,12 @@ start.bat     # Windows
 
 Runs from source using JIT compilation. The browser opens automatically when the server is ready.
 
+## Known Issues
+
+| Issue | Status | Details |
+|-------|--------|---------|
+| Double-click launch: comparison crashes | **Fixed** | In sysimage builds, CPU-bound ICP blocks the event loop with no JIT yield points. The heartbeat monitor sees stale timestamps and calls `_exit`. Fix: `comparing` flag pauses heartbeat checks during ICP; TTY-gated output suppression keeps terminal logs visible. |
+
 ## Citation
 
 Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 0.1.0. Defense POW/MIA Accounting Agency, Offutt AFB, NE.

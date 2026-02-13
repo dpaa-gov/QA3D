@@ -66,14 +66,12 @@ function julia_main()::Cint
         cd(app_dir)
         APP_ROOT[] = app_dir
 
-        # When launched without a terminal (e.g. double-click from file manager),
-        # redirect output to a log file so the pipe buffer doesn't fill up
-        # and block the process during heavy computation
-        if !isatty(stdout)
-            log_path = joinpath(app_dir, "qa3d.log")
-            log_io = open(log_path, "w")
-            redirect_stdout(log_io)
-            redirect_stderr(log_io)
+        # Suppress output only when no terminal is attached (double-click launch)
+        if !isa(stdin, Base.TTY)
+            devnull_io = open(Sys.iswindows() ? "NUL" : "/dev/null", "w")
+            redirect_stdout(devnull_io)
+            redirect_stderr(devnull_io)
+            Base.CoreLogging.global_logger(Base.CoreLogging.SimpleLogger(devnull_io, Base.CoreLogging.Error))
         end
 
         start_server()
