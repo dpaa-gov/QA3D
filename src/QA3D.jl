@@ -19,15 +19,41 @@ include("routes.jl")
 """
     open_browser(url)
 
-Open the default browser to `url`. Works on Linux, macOS, and Windows.
+Open a Chromium-based browser in app mode (no address bar/tabs).
+Falls back to the default browser if no Chromium variant is found.
+Works on Linux, macOS, and Windows.
 """
 function open_browser(url::String)
     try
         if Sys.islinux()
+            # Try Chromium-based browsers in --app mode first
+            for browser in ("google-chrome", "google-chrome-stable", "chromium-browser", "chromium", "microsoft-edge")
+                if success(`which $browser`)
+                    run(`$browser --app=$url --new-window`; wait=false)
+                    return
+                end
+            end
             run(`xdg-open $url`; wait=false)
         elseif Sys.isapple()
-            run(`open $url`; wait=false)
+            # Try Chrome app mode on macOS
+            chrome_path = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+            if isfile(chrome_path)
+                run(`$chrome_path --app=$url --new-window`; wait=false)
+            else
+                run(`open $url`; wait=false)
+            end
         elseif Sys.iswindows()
+            # Try Chrome/Edge app mode on Windows
+            for browser in (
+                raw"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                raw"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                raw"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            )
+                if isfile(browser)
+                    run(`$browser --app=$url --new-window`; wait=false)
+                    return
+                end
+            end
             run(`cmd /c start $url`; wait=false)
         end
     catch e
@@ -35,7 +61,7 @@ function open_browser(url::String)
     end
 end
 
-function start_server(; port::Int=8000, open::Bool=true)
+function start_server(; port::Int=8001, open::Bool=true)
     setup_routes()
     Genie.config.run_as_server = true
     Genie.config.server_port = port

@@ -181,6 +181,7 @@ Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 0.1.0. Defense POW/MIA Acco
 
 - [ ] Windows installer for the compiled app
 - [ ] Windows compiled app does not work — check for path handling issues
+- [ ] Adjust browser launch for app mode
 
 ## License
 
