@@ -1,7 +1,7 @@
 # QA3D 0.1.0
 
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
-![Julia](https://img.shields.io/badge/Julia-1.11+-9558B2?logo=julia&logoColor=white)
+![Julia](https://img.shields.io/badge/Julia-1.11-9558B2?logo=julia&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-passing-brightgreen?logo=linux&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-passing-brightgreen?logo=windows&logoColor=white)
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)
@@ -152,7 +152,7 @@ Build time is approximately 5–15 minutes. The bundle includes a compiled `qa3d
 ```bash
 tar xzf QA3D-v0.1.0-linux-x86_64.tar.gz
 cd QA3D-v0.1.0-linux-x86_64
-bin/qa3d
+./qa3d.sh
 ```
 
 

@@ -54,6 +54,8 @@ echo "3. Copying runtime assets..."
 cp -r "$PROJECT_DIR/public" "$STAGE_DIR/"
 cp -r "$PROJECT_DIR/views" "$STAGE_DIR/"
 cp "$PROJECT_DIR/Manifest.toml" "$STAGE_DIR/share/julia/"
+cp "$SCRIPT_DIR/qa3d.sh" "$STAGE_DIR/"
+chmod +x "$STAGE_DIR/qa3d.sh"
 
 # Step 4: Archive
 echo "4. Creating archive..."
