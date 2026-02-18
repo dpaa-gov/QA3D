@@ -1,9 +1,9 @@
 # QA3D 0.1.0
 
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
-![Julia](https://img.shields.io/badge/Julia-1.10+-blue)
+![Julia](https://img.shields.io/badge/Julia-1.11+-9558B2?logo=julia&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-passing-brightgreen?logo=linux&logoColor=white)
-![Windows](https://img.shields.io/badge/Windows-failing-red?logo=windows&logoColor=white)
+![Windows](https://img.shields.io/badge/Windows-passing-brightgreen?logo=windows&logoColor=white)
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)
 
 Quality Assurance 3D application for comparing scanned models against generated reference surfaces. QA3D reads `.xyzrgb` scan files, generates a rectangular prism surface from user-specified dimensions, and registers the scan to the surface using PCA alignment and ICP.
@@ -24,7 +24,7 @@ Quality Assurance 3D application for comparing scanned models against generated 
 | Backend | Julia + Genie |
 | Frontend | HTML/CSS/JS |
 | Visualization | Three.js + OrbitControls |
-| Packaging | PackageCompiler sysimage |
+| Packaging | PackageCompiler `create_app` |
 
 ## Project Structure
 
@@ -56,7 +56,7 @@ The `data/` directory contains an example gauge block scan (`block.xyzrgb`, 73,2
 ## Installation
 
 ### Prerequisites
-- Julia 1.10+
+- Julia 1.11+
 
 ### Development Setup
 
@@ -77,7 +77,7 @@ chmod +x start.sh
 start.bat
 ```
 
-The browser will open automatically when the server is ready at http://127.0.0.1:8000
+The browser will open automatically when the server is ready at http://127.0.0.1:8001
 
 ## Usage
 
@@ -121,7 +121,7 @@ Builds a standalone compiled executable using PackageCompiler `create_app`. No J
 
 ### Build Prerequisites
 
-- Julia 1.10+ (build machine only)
+- Julia 1.11+ (build machine only)
 - All project dependencies installed (`julia --project=. -e "using Pkg; Pkg.instantiate()"`)
 
 ### Build Steps
@@ -138,6 +138,12 @@ build\package.bat
 ```
 Output: `dist\QA3D-v0.1.0-windows-x86_64.zip`
 
+**Windows Installer** (optional, requires [Inno Setup 6+](https://jrsoftware.org/isinfo.php)):
+```cmd
+iscc build\installer.iss
+```
+Output: `dist\QA3D-v0.1.0-windows-setup.exe` — standard setup wizard with Start Menu and desktop shortcuts.
+
 Build time is approximately 5–15 minutes. The bundle includes a compiled `qa3d` executable, Julia runtime, all packages with artifacts, and web assets.
 
 ### Deploying
@@ -149,6 +155,7 @@ cd QA3D-v0.1.0-linux-x86_64
 bin/qa3d
 ```
 
+
 **Windows:**
 ```cmd
 REM Extract the zip, then:
@@ -156,7 +163,7 @@ cd QA3D-v0.1.0-windows-x86_64
 bin\qa3d.exe
 ```
 
-The browser opens automatically at http://127.0.0.1:8000. The executable can be launched from the terminal or by double-clicking.
+The browser opens automatically at http://127.0.0.1:8001. The executable can be launched from the terminal or by double-clicking.
 
 ### Development (no build needed)
 
@@ -167,21 +174,19 @@ start.bat     # Windows
 
 Runs from source using JIT compilation. The browser opens automatically when the server is ready.
 
-## Known Issues
-
-| Issue | Status | Details |
-|-------|--------|---------|
-| Double-click launch: comparison crashes | **Fixed** | In sysimage builds, CPU-bound ICP blocks the event loop with no JIT yield points. The heartbeat monitor sees stale timestamps and calls `_exit`. Fix: `comparing` flag pauses heartbeat checks during ICP; TTY-gated output suppression keeps terminal logs visible. |
-
 ## Citation
 
 Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 0.1.0. Defense POW/MIA Accounting Agency, Offutt AFB, NE.
 
+## Known Issues
+
+| Issue | Status | Details |
+|-------|--------|---------|
+| Compiled app crashes on Julia 1.12 | **Open — upstream bug** | PackageCompiler `create_app` bundles built with Julia 1.12 crash on startup. Genie's `Assets.__init__()` calls `Pkg.dependencies()`, which fails because the stdlib metadata directory (`share/julia/stdlib/`) is missing from the bundle. **Workaround**: build with Julia 1.11.x. Linux builds with 1.11.4 work on machines without Julia installed. See [PackageCompiler.jl #989](https://github.com/JuliaLang/PackageCompiler.jl/issues/989) and [#1076](https://github.com/JuliaLang/PackageCompiler.jl/issues/1076). |
+
 ## TODO
 
-- [ ] Windows installer for the compiled app
-- [ ] Windows compiled app does not work — check for path handling issues
-- [ ] Adjust browser launch for app mode
+- [ ] Thread the 8-reflection ICP loop for ~8x speedup (~60s → ~10s)
 
 ## License
 

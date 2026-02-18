@@ -21,7 +21,7 @@ include("routes.jl")
 
 Open a Chromium-based browser in app mode (no address bar/tabs).
 Falls back to the default browser if no Chromium variant is found.
-Works on Linux, macOS, and Windows.
+Works on Linux and Windows.
 """
 function open_browser(url::String)
     try
@@ -34,14 +34,6 @@ function open_browser(url::String)
                 end
             end
             run(`xdg-open $url`; wait=false)
-        elseif Sys.isapple()
-            # Try Chrome app mode on macOS
-            chrome_path = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-            if isfile(chrome_path)
-                run(`$chrome_path --app=$url --new-window`; wait=false)
-            else
-                run(`open $url`; wait=false)
-            end
         elseif Sys.iswindows()
             # Try Chrome/Edge app mode on Windows
             for browser in (
