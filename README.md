@@ -53,6 +53,12 @@ QA3D/
 
 The `data/` directory contains an example gauge block scan (`block.xyzrgb`, 73,254 points). Use dimensions **20 × 8.91 × 34.90 mm** when comparing.
 
+## Download
+
+**Windows:** Download the latest installer from [Releases](https://github.com/dpaa-gov/QA3D/releases). No Julia installation required.
+
+**Linux / Development:** Clone the repo and run from source — see [Development Setup](#development-setup) below.
+
 ## Installation
 
 ### Prerequisites
