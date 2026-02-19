@@ -90,9 +90,11 @@ function run_icp(fixed::Matrix{Float64}, moving::Matrix{Float64};
     current = copy(moving)
     prev_error = Inf
 
+    # Build KD-tree on fixed cloud ONCE (it never changes)
+    tree = KDTree(fixed')
+
     for i in 1:max_iterations
         # Find nearest neighbors: for each moving point, find closest fixed point
-        tree = KDTree(fixed')
         idxs, dists = knn(tree, current', 1)
 
         # Build correspondence arrays
@@ -163,13 +165,19 @@ function register(scan::Matrix{Float64}, surface::Matrix{Float64};
     best_ab = 0.0
     best_ba = 0.0
 
-    for (j, refl) in enumerate(REFLECTIONS)
-        reflected = apply_reflection(scan_pca, refl)
-        registered = run_icp(surf_pca, reflected)
-        dist, ab, ba = hausdorff_bidirectional(registered, surf_pca)
+    # Thread all 8 reflections — each is fully independent
+    tasks = map(enumerate(REFLECTIONS)) do (j, refl)
+        Threads.@spawn begin
+            reflected = apply_reflection(scan_pca, refl)
+            registered = run_icp(surf_pca, reflected)
+            dist, ab, ba = hausdorff_bidirectional(registered, surf_pca)
+            @info "Reflection $j $(refl): Hausdorff = $(round(dist, digits=4)) (A→B: $(round(ab, digits=4)), B→A: $(round(ba, digits=4)))"
+            (j, refl, dist, ab, ba, registered)
+        end
+    end
 
-        @info "Reflection $j $(refl): Hausdorff = $(round(dist, digits=4)) (A→B: $(round(ab, digits=4)), B→A: $(round(ba, digits=4)))"
-
+    for t in tasks
+        j, refl, dist, ab, ba, registered = fetch(t)
         if dist < best_dist
             best_dist = dist
             best_result = registered

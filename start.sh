@@ -6,10 +6,10 @@ cd "$(dirname "$0")"
 
 PORT=8001
 
-echo "Starting QA3D on port $PORT..."
-
-# Start Julia server in background
-julia --project=. -e "using QA3D; QA3D.APP_ROOT[] = pwd(); QA3D.start_server(open=false)" &
+# Start Julia server in background with threads for parallel ICP reflections
+THREADS=$(nproc)
+echo "Starting QA3D on port $PORT (threads=$THREADS)..."
+julia --threads=$THREADS --project=. -e "using QA3D; QA3D.APP_ROOT[] = pwd(); QA3D.start_server(open=false)" &
 JULIA_PID=$!
 
 # Auto-open browser in app mode when server is ready

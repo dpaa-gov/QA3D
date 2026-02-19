@@ -184,10 +184,6 @@ Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 0.1.0. Defense POW/MIA Acco
 |-------|--------|---------|
 | Compiled app crashes on Julia 1.12 | **Open — upstream bug** | PackageCompiler `create_app` bundles built with Julia 1.12 crash on startup. Genie's `Assets.__init__()` calls `Pkg.dependencies()`, which fails because the stdlib metadata directory (`share/julia/stdlib/`) is missing from the bundle. **Workaround**: build with Julia 1.11.x. Linux builds with 1.11.4 work on machines without Julia installed. See [PackageCompiler.jl #989](https://github.com/JuliaLang/PackageCompiler.jl/issues/989) and [#1076](https://github.com/JuliaLang/PackageCompiler.jl/issues/1076). |
 
-## TODO
-
-- [ ] Thread the 8-reflection ICP loop for ~8x speedup (~60s → ~10s)
-
 ## License
 
 GNU General Public License v2.0 — see [LICENSE](LICENSE) for details.
