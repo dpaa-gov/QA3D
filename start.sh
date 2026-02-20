@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 PORT=8001
 
 # Start Julia server in background with threads for parallel ICP reflections
-THREADS=$(nproc)
+THREADS=8
 echo "Starting QA3D on port $PORT (threads=$THREADS)..."
 julia --threads=$THREADS --project=. -e "using QA3D; QA3D.APP_ROOT[] = pwd(); QA3D.start_server(open=false)" &
 JULIA_PID=$!
