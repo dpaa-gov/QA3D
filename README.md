@@ -1,4 +1,4 @@
-# QA3D 0.1.0
+# Quality Assurance 3D (QA3D) v1.0.0
 
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
 ![Julia](https://img.shields.io/badge/Julia-1.11-9558B2?logo=julia&logoColor=white)
@@ -112,8 +112,8 @@ npm run build
 
 | Platform | Output |
 |----------|--------|
-| **Linux** | `dist/QA3D-0.1.0.AppImage` |
-| **Windows** | `dist/QA3D Setup 0.1.0.exe` |
+| **Linux** | `dist/QA3D-1.0.0.AppImage` |
+| **Windows** | `dist/QA3D Setup 1.0.0.exe` |
 
 ### Windows Installer
 
