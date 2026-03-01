@@ -325,6 +325,13 @@ body {
     justify-content: center;
 }
 
+.viewer-container canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
 .viewer-placeholder {
     text-align: center;
     color: var(--text-muted);

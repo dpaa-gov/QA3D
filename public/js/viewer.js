@@ -66,9 +66,11 @@ const Viewer = (function () {
 
         // Resize handling
         const ro = new ResizeObserver(() => {
-            camera.aspect = container.clientWidth / container.clientHeight;
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            camera.aspect = w / h;
             camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setSize(w, h);
         });
         ro.observe(container);
 
