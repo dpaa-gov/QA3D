@@ -1,7 +1,9 @@
-// QA3D Frontend Application
+// QA3D Frontend Application — Electron mode
 
 (function () {
     'use strict';
+
+    const invoke = (channel, data) => window.qa3d.invoke(channel, data);
 
     // ── State ────────────────────────────────────
     let selectedFilePath = '';
@@ -34,11 +36,6 @@
     const selectFileBtn = document.getElementById('select-file-btn');
     const modalClose = modal.querySelector('.modal-close');
     const modalCancel = modal.querySelector('.modal-cancel');
-
-    // ── Heartbeat ────────────────────────────────
-    setInterval(() => {
-        fetch('/api/heartbeat', { method: 'POST' }).catch(() => { });
-    }, 5000);
 
     // ── Enable/disable Compare button ────────────
     function updateCompareState() {
@@ -74,8 +71,7 @@
         // Get home directory on first open
         if (currentBrowsePath === '/') {
             try {
-                const res = await fetch('/api/homedir');
-                const data = await res.json();
+                const data = await invoke('get_homedir');
                 currentBrowsePath = data.path;
             } catch (e) { /* use default */ }
         }
@@ -113,12 +109,7 @@
 
     async function loadDirectory(path) {
         try {
-            const res = await fetch('/api/browse', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path })
-            });
-            const data = await res.json();
+            const data = await invoke('browse_directory', { path });
             if (data.error) return;
 
             currentBrowsePath = data.currentPath;
@@ -173,12 +164,7 @@
 
         // Fetch point count for auto-density
         try {
-            const res = await fetch('/api/fileinfo', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filepath: path })
-            });
-            const data = await res.json();
+            const data = await invoke('get_fileinfo', { filepath: path });
             if (data.points) {
                 scanPointCount = data.points;
                 autoCalcDensity();
@@ -195,19 +181,13 @@
         compareBtn.textContent = '⏳ Comparing...';
 
         try {
-            // Step 1: Run comparison — returns scalar metrics + data file path
-            const res = await fetch('/api/compare', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    filepath: selectedFilePath,
-                    x: parseFloat(dimX.value),
-                    y: parseFloat(dimY.value),
-                    z: parseFloat(dimZ.value),
-                    d: parseFloat(dimD.value)
-                })
+            const data = await invoke('run_compare', {
+                filepath: selectedFilePath,
+                x: parseFloat(dimX.value),
+                y: parseFloat(dimY.value),
+                z: parseFloat(dimZ.value),
+                d: parseFloat(dimD.value)
             });
-            const data = await res.json();
 
             if (data.error) {
                 alert('Error: ' + data.error);
@@ -245,15 +225,13 @@
 
             clearBtn.classList.remove('hidden');
 
-            // Fetch point cloud data if viewer is enabled
-            if (data.dataFile && typeof Viewer !== 'undefined') {
+            // Load point cloud data into viewer
+            if (typeof Viewer !== 'undefined' && data.scanCoords) {
                 toggleModeBtn.classList.remove('hidden');
-                const cloudRes = await fetch(data.dataFile);
-                const cloudData = await cloudRes.json();
-                Viewer.loadResults(cloudData);
+                Viewer.loadResults(data);
             }
         } catch (e) {
-            alert('Error: ' + e.message);
+            alert('Error: ' + e);
         } finally {
             compareBtn.textContent = '⚡ Compare';
             updateCompareState();

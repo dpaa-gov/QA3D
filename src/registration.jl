@@ -139,22 +139,15 @@ function hausdorff_bidirectional(A::Matrix{Float64}, B::Matrix{Float64})
     return (mean_ab + mean_ba) / 2, mean_ab, mean_ba
 end
 
-using JSON3
-
-# ── Main entry point ─────────────────────────────────────────
 """
-    register(scan, surface; data_dir=nothing) -> Dict
+    register(scan, surface) -> Dict
 
 1. PCA-align both point clouds
 2. Try all 8 axis reflections
 3. Point-to-point ICP for each
-4. Return best (lowest bidirectional Hausdorff)
-
-If `data_dir` is provided, per-point distances and coordinates are written
-directly to a temp JSON file (never held in the return Dict).
+4. Return best (lowest bidirectional Hausdorff) with per-point data
 """
-function register(scan::Matrix{Float64}, surface::Matrix{Float64};
-                  data_dir::Union{String,Nothing}=nothing)
+function register(scan::Matrix{Float64}, surface::Matrix{Float64})
     # PCA alignment (matches R: scale + eigen(var))
     scan_pca = pca_align(scan)
     surf_pca = pca_align(surface)
@@ -187,41 +180,24 @@ function register(scan::Matrix{Float64}, surface::Matrix{Float64};
         end
     end
 
-    result = Dict(
+    # Compute per-point distances for visualization
+    tree_surf = KDTree(surf_pca')
+    _, scan_dists = knn(tree_surf, best_result', 1)
+
+    tree_scan = KDTree(best_result')
+    _, surf_dists = knn(tree_scan, surf_pca', 1)
+
+    return Dict(
         "status" => "complete",
-        "best_distance" => round(best_dist, digits=4),
-        "best_reflection" => best_reflection,
-        "mean_a_to_b" => round(best_ab, digits=4),
-        "mean_b_to_a" => round(best_ba, digits=4)
+        "bestDistance" => round(best_dist, digits=4),
+        "bestReflection" => best_reflection,
+        "meanAtoB" => round(best_ab, digits=4),
+        "meanBtoA" => round(best_ba, digits=4),
+        "scanCoords" => vec(best_result'),
+        "surfCoords" => vec(surf_pca'),
+        "scanDistances" => [round(scan_dists[i][1], digits=4) for i in eachindex(scan_dists)],
+        "surfDistances" => [round(surf_dists[i][1], digits=4) for i in eachindex(surf_dists)]
     )
-
-    # If data_dir provided, compute per-point distances and stream to file
-    if data_dir !== nothing
-        mkpath(data_dir)
-        data_id = "result_$(round(Int, time() * 1000))"
-        data_file = joinpath(data_dir, "$data_id.json")
-
-        # Compute per-point distances
-        tree_surf = KDTree(surf_pca')
-        _, scan_dists = knn(tree_surf, best_result', 1)
-
-        tree_scan = KDTree(best_result')
-        _, surf_dists = knn(tree_scan, surf_pca', 1)
-
-        # Stream directly to file — large arrays never enter the Dict
-        open(data_file, "w") do io
-            JSON3.write(io, Dict(
-                "scanCoords" => vec(best_result'),
-                "surfCoords" => vec(surf_pca'),
-                "scanDistances" => [round(scan_dists[i][1], digits=4) for i in eachindex(scan_dists)],
-                "surfDistances" => [round(surf_dists[i][1], digits=4) for i in eachindex(surf_dists)]
-            ))
-        end
-
-        result["dataFile"] = "/data/$data_id.json"
-    end
-
-    return result
 end
 
 end # module

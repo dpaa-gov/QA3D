@@ -1,10 +1,8 @@
 name = "QA3D"
 uuid = "91266f49-abca-4e9b-ad2f-b55d60904961"
-version = "0.1.0"
+version = "1.0.0"
 
 [deps]
-Genie = "c43c736e-a2d1-11e8-161f-af95117fbd1e"
-HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MultivariateStats = "6f286f6a-111f-5878-ab1e-185364afe411"

@@ -1,6 +1,20 @@
 # Build artifacts
-dist/
 .agent/
+
+# Electron
+node_modules/
+dist/
+out/
+package-lock.json
+
+# Julia sidecar (compiled)
+sidecar/
+
+# Julia
+Manifest.toml
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
 
 # OS-level
 .DS_Store
@@ -10,11 +24,6 @@ Thumbs.db
 *.swp
 *.swo
 *~
-
-# Julia
-*.jl.cov
-*.jl.*.cov
-*.jl.mem
 
 # Logs
 *.log

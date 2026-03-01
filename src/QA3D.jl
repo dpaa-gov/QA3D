@@ -1,100 +1,99 @@
 module QA3D
 
-using Genie
-using Genie.Router
-using Genie.Renderer.Json
-using Genie.Requests
-using HTTP
 using JSON3
+using LinearAlgebra
+using MultivariateStats
+using NearestNeighbors
+using Statistics
 
-# Runtime app root — set by julia_main() or app.jl before server launch
-const APP_ROOT = Ref{String}(pwd())
-
-# Include all source at compile time
 include("xyzrgb_reader.jl")
 include("surface_generator.jl")
 include("registration.jl")
-include("routes.jl")
+
+using .XYZRGBReader
+using .SurfaceGenerator
+using .Registration
 
 """
-    open_browser(url)
+    handle_command(cmd::Dict) -> Dict
 
-Open a Chromium-based browser in app mode (no address bar/tabs).
-Falls back to the default browser if no Chromium variant is found.
-Works on Linux and Windows.
+Dispatch a JSON command to the appropriate handler function.
 """
-function open_browser(url::String)
+function handle_command(cmd::Dict)
+    command = get(cmd, "command", "")
+
     try
-        if Sys.islinux()
-            # Try Chromium-based browsers in --app mode first
-            for browser in ("google-chrome", "google-chrome-stable", "chromium-browser", "chromium", "microsoft-edge")
-                if success(`which $browser`)
-                    run(`$browser --app=$url --new-window`; wait=false)
-                    return
-                end
+        if command == "fileinfo"
+            filepath = get(cmd, "filepath", "")
+            if !isfile(filepath) || lowercase(splitext(filepath)[2]) != ".xyzrgb"
+                return Dict("error" => "Invalid file")
             end
-            run(`xdg-open $url`; wait=false)
-        elseif Sys.iswindows()
-            # Try Chrome/Edge app mode on Windows
-            for browser in (
-                raw"C:\Program Files\Google\Chrome\Application\chrome.exe",
-                raw"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-                raw"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-            )
-                if isfile(browser)
-                    run(`$browser --app=$url --new-window`; wait=false)
-                    return
-                end
+            coords = read_xyzrgb(filepath)
+            return Dict("points" => size(coords, 1))
+
+        elseif command == "compare"
+            filepath = get(cmd, "filepath", "")
+            dim_x = Float64(get(cmd, "x", 0.0))
+            dim_y = Float64(get(cmd, "y", 0.0))
+            dim_z = Float64(get(cmd, "z", 0.0))
+            density = Float64(get(cmd, "d", 1.0))
+
+            if !isfile(filepath) || lowercase(splitext(filepath)[2]) != ".xyzrgb"
+                return Dict("error" => "Invalid .xyzrgb file")
             end
-            run(`cmd /c start $url`; wait=false)
+            if dim_x <= 0 || dim_y <= 0 || dim_z <= 0 || density <= 0
+                return Dict("error" => "All dimensions and density must be positive")
+            end
+
+            scan_coords = read_xyzrgb(filepath)
+            surface = generate_surface(dim_x, dim_y, dim_z, density)
+            result = register(scan_coords, surface)
+
+            result["success"] = true
+            result["scanPoints"] = size(scan_coords, 1)
+            result["surfacePoints"] = size(surface, 1)
+
+            return result
+
+        else
+            return Dict("error" => "Unknown command: $command")
         end
+
     catch e
-        @warn "Could not open browser" exception=e
+        return Dict("error" => string(e))
     end
 end
 
-function start_server(; port::Int=8001, open::Bool=true)
-    setup_routes()
-    Genie.config.run_as_server = true
-    Genie.config.server_port = port
-    Genie.config.cors_headers["Access-Control-Allow-Origin"] = "*"
-    Genie.config.path_build = "public"
+"""
+    sidecar_main()
 
-    # Start server async, open browser, then block
-    up(port, async=true)
-    open && open_browser("http://127.0.0.1:$port")
-    @info "QA3D running at http://127.0.0.1:$port — press Ctrl+C to stop"
+Main loop for the sidecar process. Reads JSON commands from stdin,
+dispatches to handlers, and writes JSON responses to stdout.
+"""
+function sidecar_main()
+    while !eof(stdin)
+        line = readline(stdin)
+        isempty(strip(line)) && continue
 
-    # Block until interrupted
-    try
-        while true
-            sleep(1)
+        try
+            cmd = JSON3.read(line, Dict{String,Any})
+            result = handle_command(cmd)
+            println(stdout, JSON3.write(result))
+            flush(stdout)
+        catch e
+            error_response = Dict("error" => "Failed to parse command: $(string(e))")
+            println(stdout, JSON3.write(error_response))
+            flush(stdout)
         end
-    catch e
-        e isa InterruptException || rethrow()
-        @info "Shutting down..."
     end
 end
 
 # Entry point for compiled executable
 function julia_main()::Cint
     try
-        # Set working directory and APP_ROOT to the compiled app root
-        app_dir = dirname(dirname(realpath(Base.julia_cmd().exec[1])))
-        cd(app_dir)
-        APP_ROOT[] = app_dir
-
-        # Suppress output only when no terminal is attached (double-click launch)
-        if !isa(stdin, Base.TTY)
-            devnull_io = open(Sys.iswindows() ? "NUL" : "/dev/null", "w")
-            redirect_stdout(devnull_io)
-            redirect_stderr(devnull_io)
-            Base.CoreLogging.global_logger(Base.CoreLogging.SimpleLogger(devnull_io, Base.CoreLogging.Error))
-        end
-
-        start_server()
+        sidecar_main()
     catch e
-        @error "QA3D fatal error" exception=(e, catch_backtrace())
+        println(stderr, "QA3D fatal error: $(string(e))")
         return 1
     end
     return 0
