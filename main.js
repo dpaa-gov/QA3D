@@ -31,8 +31,9 @@ function startSidecar() {
     if (fs.existsSync(sidecarPath)) {
         console.log('Starting compiled sidecar:', sidecarPath);
         sidecarProcess = spawn(sidecarPath, [], {
-            stdio: ['pipe', 'pipe', 'inherit'],
+            stdio: ['pipe', 'pipe', 'pipe'],
             env: { ...process.env, JULIA_NUM_THREADS: String(threads) },
+            windowsHide: true,
         });
     } else {
         console.log('No compiled sidecar found, using Julia dev mode...');
@@ -44,7 +45,8 @@ function startSidecar() {
             'using QA3D; QA3D.sidecar_main()',
         ], {
             cwd: projectDir,
-            stdio: ['pipe', 'pipe', 'inherit'],
+            stdio: ['pipe', 'pipe', 'pipe'],
+            windowsHide: true,
         });
     }
 
