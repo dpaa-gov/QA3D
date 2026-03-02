@@ -4,7 +4,7 @@
 ![Julia](https://img.shields.io/badge/Julia-1.11-9558B2?logo=julia&logoColor=white)
 ![Electron](https://img.shields.io/badge/Electron-34-47848F?logo=electron&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-passing-brightgreen?logo=linux&logoColor=white)
-![Windows](https://img.shields.io/badge/Windows-untested-lightgrey?logo=windows&logoColor=white)
+![Windows](https://img.shields.io/badge/Windows-passing-brightgreen?logo=windows&logoColor=white)
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)
 
 A desktop application for comparing scanned models against generated reference surfaces. QA3D reads `.xyzrgb` scan files, generates a rectangular prism surface from user-specified dimensions, and registers the scan to the surface using PCA alignment and ICP. Built with Electron + Julia.
