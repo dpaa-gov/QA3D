@@ -7,9 +7,7 @@
 ![Windows](https://img.shields.io/badge/Windows-untested-lightgrey?logo=windows&logoColor=white)
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)
 
-Quality Assurance 3D application for comparing scanned models against generated reference surfaces. QA3D reads `.xyzrgb` scan files, generates a rectangular prism surface from user-specified dimensions, and registers the scan to the surface using PCA alignment and ICP. Built with Electron + Julia.
-
-![QA3D Screenshot](screenshot.png)
+A desktop application for comparing scanned models against generated reference surfaces. QA3D reads `.xyzrgb` scan files, generates a rectangular prism surface from user-specified dimensions, and registers the scan to the surface using PCA alignment and ICP. Built with Electron + Julia.
 
 **Key Features:**
 - **XYZRGB Model Loading** — reads 3D scan data from `.xyzrgb` files
@@ -17,7 +15,6 @@ Quality Assurance 3D application for comparing scanned models against generated 
 - **Auto-Density Calculation** — automatically matches surface point density to the scan
 - **PCA + ICP Registration** — point-to-point ICP with 8-axis reflection search (multithreaded, up to 8 threads)
 - **3D Visualization** — interactive Three.js viewer with distance heatmap and dual-color modes
-- **Offline** — works entirely offline, no internet connection required
 
 ## Architecture
 
@@ -68,26 +65,6 @@ npm install
 
 ```bash
 npm run dev
-```
-
-This launches the Electron window. The Julia sidecar starts automatically in dev mode (no compilation needed).
-
-### Clean Build
-
-To wipe all caches and rebuild from scratch:
-
-```bash
-# Julia
-rm -f Manifest.toml
-rm -rf ~/.julia/compiled/v1.11/QA3D
-rm -rf sidecar/
-
-# Node/Electron
-rm -rf node_modules dist out package-lock.json
-
-# Reinstall
-julia --project=. -e "using Pkg; Pkg.instantiate()"
-npm install
 ```
 
 ## Building for Distribution
@@ -210,4 +187,4 @@ Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 1.0.0. Defense POW/MIA Acco
 
 ## License
 
-GNU General Public License v2.0 — see [LICENSE](LICENSE) for details.
+GNU General Public License v2.0
