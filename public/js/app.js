@@ -110,7 +110,11 @@
     async function loadDirectory(path) {
         try {
             const data = await invoke('browse_directory', { path });
-            if (data.error) return;
+            if (data.error) {
+                // Show error inline instead of alert() — native alert breaks GTK signal handlers on Linux
+                dirListing.innerHTML = `<div style="padding: 1rem; text-align: center; color: var(--error);">⚠ ${data.error}</div>`;
+                return;
+            }
 
             currentBrowsePath = data.currentPath;
             modalPath.value = data.currentPath;

@@ -111,7 +111,7 @@ ipcMain.handle('browse_directory', async (_event, { path: dirPath }) => {
 
         return { entries, currentPath: dirPath };
     } catch (e) {
-        return { error: e.message, entries: [] };
+        return { error: e.message.replace(/^ENOENT:\s*/, ''), entries: [] };
     }
 });
 
