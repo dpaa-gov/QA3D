@@ -1,5 +1,5 @@
 // QA3D 3D Viewer — Three.js point cloud visualization with distance heatmap
-// Depends on THREE + OrbitControls loaded via CDN
+// Depends on THREE + TrackballControls
 
 const Viewer = (function () {
     'use strict';
@@ -57,9 +57,16 @@ const Viewer = (function () {
         renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(renderer.domElement);
 
-        controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.1;
+        controls = new THREE.TrackballControls(camera, renderer.domElement);
+        controls.rotateSpeed = 1.2;
+        controls.zoomSpeed = 1.2;
+        controls.panSpeed = 0.3;
+        controls.staticMoving = true;
+        controls.mouseButtons = {
+            LEFT: 0,     // left-click triggers ROTATE (no landmarks in QA3D)
+            MIDDLE: 1,   // middle-click triggers ZOOM
+            RIGHT: 2     // right-click triggers PAN
+        };
 
         // Ambient light
         scene.add(new THREE.AmbientLight(0xffffff, 1.0));
@@ -71,6 +78,7 @@ const Viewer = (function () {
             camera.aspect = w / h;
             camera.updateProjectionMatrix();
             renderer.setSize(w, h);
+            controls.handleResize();
         });
         ro.observe(container);
 

@@ -92,17 +92,6 @@ npm run build
 | **Linux** | `dist/QA3D-1.0.0.AppImage` |
 | **Windows** | `dist/QA3D Setup 1.0.0.exe` |
 
-### Windows Installer
-
-On a Windows machine with Julia and Node.js installed:
-
-```cmd
-julia build\build_sysimage.jl
-npm run build
-```
-
-The NSIS installer will be in the `dist\` directory.
-
 ---
 
 ## Usage
