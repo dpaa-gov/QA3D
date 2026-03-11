@@ -47,7 +47,7 @@ const Viewer = (function () {
         container.innerHTML = '';
 
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a2e);
+        scene.background = new THREE.Color(0x1a1d23);
 
         camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 10000);
         camera.position.set(0, 0, 50);
