@@ -7,6 +7,8 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 :root {
@@ -356,6 +358,30 @@ body {
     font-size: 12px;
 }
 
+.toolbar-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.toolbar-control label {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.toolbar-control input[type="range"] {
+    width: 80px;
+    height: 4px;
+}
+
+.slider-value {
+    font-size: 11px;
+    color: var(--text-secondary);
+    min-width: 1.5rem;
+    text-align: center;
+}
+
 /* ── Color Legend ─────────────────────────────── */
 .color-legend {
     position: absolute;
@@ -514,6 +540,22 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* ── Select Dropdown ──────────────────────────── */
+.viz-select {
+    padding: 4px 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.viz-select:focus {
+    outline: none;
+    border-color: var(--accent);
 }
 
 /* ── Utilities ────────────────────────────────── */

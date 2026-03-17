@@ -23,6 +23,10 @@
     const resultsSection = document.getElementById('results-section');
     const resultsContent = document.getElementById('results-content');
     const toggleModeBtn = document.getElementById('toggle-mode-btn');
+    const colormapSelect = document.getElementById('colormap-select');
+    const pointSizeControl = document.getElementById('point-size-control');
+    const pointSizeSlider = document.getElementById('point-size-slider');
+    const pointSizeValue = document.getElementById('point-size-value');
 
     // Initialize 3D viewer
     if (typeof Viewer !== 'undefined') Viewer.init('viewer-container');
@@ -232,6 +236,8 @@
             // Load point cloud data into viewer
             if (typeof Viewer !== 'undefined' && data.scanCoords) {
                 toggleModeBtn.classList.remove('hidden');
+                colormapSelect.classList.remove('hidden');
+                pointSizeControl.classList.remove('hidden');
                 Viewer.loadResults(data);
             }
         } catch (e) {
@@ -255,6 +261,11 @@
         resultsSection.classList.add('hidden');
         clearBtn.classList.add('hidden');
         toggleModeBtn.classList.add('hidden');
+        colormapSelect.classList.add('hidden');
+        colormapSelect.value = 'green-red';
+        pointSizeControl.classList.add('hidden');
+        pointSizeSlider.value = '0.4';
+        pointSizeValue.textContent = '0.4';
         if (typeof Viewer !== 'undefined') Viewer.clear();
         updateCompareState();
     });
@@ -263,6 +274,20 @@
     toggleModeBtn.addEventListener('click', () => {
         const mode = typeof Viewer !== 'undefined' ? Viewer.toggleMode() : 'heatmap';
         toggleModeBtn.textContent = mode === 'heatmap' ? '🎨 Dual Color' : '🌡️ Heatmap';
+        // Show colormap selector only in heatmap mode
+        colormapSelect.classList.toggle('hidden', mode !== 'heatmap');
+    });
+
+    // ── Colormap selector ───────────────────────────
+    colormapSelect.addEventListener('change', (e) => {
+        if (typeof Viewer !== 'undefined') Viewer.setColormap(e.target.value);
+    });
+
+    // ── Point size slider ───────────────────────────
+    pointSizeSlider.addEventListener('input', (e) => {
+        const size = parseFloat(e.target.value);
+        pointSizeValue.textContent = size.toFixed(1);
+        if (typeof Viewer !== 'undefined') Viewer.setPointSize(size);
     });
 
 })();

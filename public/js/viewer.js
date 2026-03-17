@@ -11,24 +11,81 @@ const Viewer = (function () {
     let storedData = null;
     let containerId = null;
     let initialized = false;
+    let currentColormap = 'green-red';
+    let currentPointSize = 0.4;
+
+    // ── Colormap definitions ────────────────────────
+    const colormaps = {
+        'green-red': {
+            label: 'Green → Red',
+            css: 'linear-gradient(to right, #00ff1a, #ffff00, #ff0000)',
+            map(t) {
+                let r, g, b;
+                if (t < 0.5) {
+                    r = t * 2; g = 1.0; b = 0.0;
+                } else {
+                    r = 1.0; g = 1.0 - (t - 0.5) * 2; b = 0.0;
+                }
+                return { r, g, b };
+            }
+        },
+        'viridis': {
+            label: 'Viridis',
+            css: 'linear-gradient(to right, #440154, #31688e, #35b779, #fde725)',
+            map(t) {
+                const stops = [
+                    [0.267, 0.004, 0.329],
+                    [0.283, 0.141, 0.458],
+                    [0.254, 0.265, 0.530],
+                    [0.207, 0.372, 0.553],
+                    [0.164, 0.471, 0.558],
+                    [0.128, 0.567, 0.551],
+                    [0.135, 0.659, 0.518],
+                    [0.267, 0.749, 0.441],
+                    [0.478, 0.821, 0.318],
+                    [0.741, 0.873, 0.150],
+                    [0.993, 0.906, 0.144]
+                ];
+                return sampleStops(stops, t);
+            }
+        },
+        'inferno': {
+            label: 'Inferno',
+            css: 'linear-gradient(to right, #000004, #420a68, #932667, #dd513a, #fca50a, #fcffa4)',
+            map(t) {
+                const stops = [
+                    [0.001, 0.000, 0.014],
+                    [0.133, 0.027, 0.329],
+                    [0.341, 0.063, 0.431],
+                    [0.545, 0.114, 0.380],
+                    [0.735, 0.216, 0.263],
+                    [0.878, 0.376, 0.122],
+                    [0.957, 0.553, 0.039],
+                    [0.982, 0.733, 0.114],
+                    [0.945, 0.894, 0.319],
+                    [0.988, 1.000, 0.644]
+                ];
+                return sampleStops(stops, t);
+            }
+        }
+    };
+
+    function sampleStops(stops, t) {
+        const n = stops.length - 1;
+        const idx = t * n;
+        const lo = Math.min(Math.floor(idx), n - 1);
+        const hi = lo + 1;
+        const f = idx - lo;
+        return {
+            r: stops[lo][0] + (stops[hi][0] - stops[lo][0]) * f,
+            g: stops[lo][1] + (stops[hi][1] - stops[lo][1]) * f,
+            b: stops[lo][2] + (stops[hi][2] - stops[lo][2]) * f
+        };
+    }
 
     // ── Color helpers ────────────────────────────────
-    // Green → Yellow → Red gradient for heatmap
     function distanceToColor(t) {
-        // t is 0..1 (normalized distance)
-        let r, g, b;
-        if (t < 0.5) {
-            // green → yellow
-            r = t * 2;
-            g = 1.0;
-            b = 0.0;
-        } else {
-            // yellow → red
-            r = 1.0;
-            g = 1.0 - (t - 0.5) * 2;
-            b = 0.0;
-        }
-        return { r, g, b };
+        return colormaps[currentColormap].map(t);
     }
 
     // ── Initialize (deferred) ───────────────────────
@@ -106,6 +163,28 @@ const Viewer = (function () {
         return new THREE.Points(geometry, material);
     }
 
+    // ── Recompute heatmap colors from stored distances ──
+    function recomputeHeatColors() {
+        if (!storedData) return;
+        const range = storedData.maxDist - storedData.minDist || 1;
+
+        for (let i = 0; i < storedData.nScan; i++) {
+            const t = (storedData.scanDistances[i] - storedData.minDist) / range;
+            const c = distanceToColor(Math.min(1, Math.max(0, t)));
+            storedData.scanHeatColors[i * 3] = c.r;
+            storedData.scanHeatColors[i * 3 + 1] = c.g;
+            storedData.scanHeatColors[i * 3 + 2] = c.b;
+        }
+
+        for (let i = 0; i < storedData.nSurf; i++) {
+            const t = (storedData.surfDistances[i] - storedData.minDist) / range;
+            const c = distanceToColor(Math.min(1, Math.max(0, t)));
+            storedData.surfHeatColors[i * 3] = c.r;
+            storedData.surfHeatColors[i * 3 + 1] = c.g;
+            storedData.surfHeatColors[i * 3 + 2] = c.b;
+        }
+    }
+
     // ── Load comparison results ─────────────────────
     function loadResults(data) {
         ensureInitialized();
@@ -144,24 +223,9 @@ const Viewer = (function () {
         storedData.maxDist = maxDist;
 
         // Compute heatmap colors
-        const range = maxDist - minDist || 1;
         storedData.scanHeatColors = new Float32Array(nScan * 3);
-        for (let i = 0; i < nScan; i++) {
-            const t = (scanDists[i] - minDist) / range;
-            const c = distanceToColor(t);
-            storedData.scanHeatColors[i * 3] = c.r;
-            storedData.scanHeatColors[i * 3 + 1] = c.g;
-            storedData.scanHeatColors[i * 3 + 2] = c.b;
-        }
-
         storedData.surfHeatColors = new Float32Array(nSurf * 3);
-        for (let i = 0; i < nSurf; i++) {
-            const t = (surfDists[i] - minDist) / range;
-            const c = distanceToColor(t);
-            storedData.surfHeatColors[i * 3] = c.r;
-            storedData.surfHeatColors[i * 3 + 1] = c.g;
-            storedData.surfHeatColors[i * 3 + 2] = c.b;
-        }
+        recomputeHeatColors();
 
         // Dual-color: scan = gold, surface = blue
         storedData.scanDualColors = new Float32Array(nScan * 3);
@@ -196,11 +260,13 @@ const Viewer = (function () {
         if (surfCloud) { scene.remove(surfCloud); surfCloud.geometry.dispose(); }
 
         if (mode === 'heatmap') {
-            scanCloud = createPointCloud(storedData.scanCoordsF32, storedData.scanHeatColors, 0.4);
-            surfCloud = createPointCloud(storedData.surfCoordsF32, storedData.surfHeatColors, 0.4);
+            scanCloud = createPointCloud(storedData.scanCoordsF32, storedData.scanHeatColors, currentPointSize);
+            surfCloud = createPointCloud(storedData.surfCoordsF32, storedData.surfHeatColors, currentPointSize);
+            if (legendEl) legendEl.style.display = '';
         } else {
-            scanCloud = createPointCloud(storedData.scanCoordsF32, storedData.scanDualColors, 0.4);
-            surfCloud = createPointCloud(storedData.surfCoordsF32, storedData.surfDualColors, 0.4);
+            scanCloud = createPointCloud(storedData.scanCoordsF32, storedData.scanDualColors, currentPointSize);
+            surfCloud = createPointCloud(storedData.surfCoordsF32, storedData.surfDualColors, currentPointSize);
+            if (legendEl) legendEl.style.display = 'none';
         }
 
         scene.add(scanCloud);
@@ -251,9 +317,10 @@ const Viewer = (function () {
         const container = renderer.domElement.parentElement;
         legendEl = document.createElement('div');
         legendEl.className = 'color-legend';
+        const gradientCss = colormaps[currentColormap].css;
         legendEl.innerHTML = `
             <div class="legend-bar">
-                <div class="legend-gradient"></div>
+                <div class="legend-gradient" style="background: ${gradientCss}"></div>
             </div>
             <div class="legend-labels">
                 <span>${minDist.toFixed(3)}</span>
@@ -265,6 +332,23 @@ const Viewer = (function () {
         container.appendChild(legendEl);
     }
 
+    // ── Set colormap and recompute ──────────────────
+    function setColormap(name) {
+        if (!colormaps[name]) return;
+        currentColormap = name;
+        if (!storedData) return;
+
+        recomputeHeatColors();
+
+        // Refresh clouds if in heatmap mode
+        if (currentMode === 'heatmap') {
+            applyMode('heatmap');
+        }
+
+        // Update legend gradient
+        buildLegend(storedData.minDist, storedData.maxDist);
+    }
+
     function clear() {
         if (scanCloud) { scene.remove(scanCloud); scanCloud.geometry.dispose(); scanCloud = null; }
         if (surfCloud) { scene.remove(surfCloud); surfCloud.geometry.dispose(); surfCloud = null; }
@@ -272,5 +356,11 @@ const Viewer = (function () {
         storedData = null;
     }
 
-    return { init, loadResults, toggleMode, getMode, clear };
+    function setPointSize(size) {
+        currentPointSize = size;
+        if (scanCloud) scanCloud.material.size = size;
+        if (surfCloud) surfCloud.material.size = size;
+    }
+
+    return { init, loadResults, toggleMode, getMode, setColormap, setPointSize, clear };
 })();
