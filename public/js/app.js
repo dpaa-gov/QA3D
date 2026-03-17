@@ -7,7 +7,6 @@
 
     // ── State ────────────────────────────────────
     let selectedFilePath = '';
-    let currentBrowsePath = '/';
     let scanPointCount = 0;
     let densityManuallySet = false;
 
@@ -30,16 +29,6 @@
 
     // Initialize 3D viewer
     if (typeof Viewer !== 'undefined') Viewer.init('viewer-container');
-
-    // Modal elements
-    const modal = document.getElementById('browser-modal');
-    const modalPath = document.getElementById('modal-current-path');
-    const dirListing = document.getElementById('directory-listing');
-    const parentDirBtn = document.getElementById('parent-dir-btn');
-    const goToPathBtn = document.getElementById('go-to-path-btn');
-    const selectFileBtn = document.getElementById('select-file-btn');
-    const modalClose = modal.querySelector('.modal-close');
-    const modalCancel = modal.querySelector('.modal-cancel');
 
     // ── Enable/disable Compare button ────────────
     function updateCompareState() {
@@ -70,109 +59,18 @@
         }
     }
 
-    // ── File Browser Modal ───────────────────────
+    // ── Browse (native file dialog) ─────────────
     browseBtn.addEventListener('click', async () => {
-        // Get home directory on first open
-        if (currentBrowsePath === '/') {
-            try {
-                const data = await invoke('get_homedir');
-                currentBrowsePath = data.path;
-            } catch (e) { /* use default */ }
-        }
-        openModal();
-        loadDirectory(currentBrowsePath);
-    });
+        const result = await invoke('select_file');
+        if (!result.path) return; // user cancelled
 
-    function openModal() {
-        modal.classList.add('active');
-        selectFileBtn.disabled = true;
-    }
-
-    function closeModal() {
-        modal.classList.remove('active');
-    }
-
-    modalClose.addEventListener('click', closeModal);
-    modalCancel.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
-    });
-
-    parentDirBtn.addEventListener('click', () => {
-        const parent = currentBrowsePath.replace(/[/\\][^/\\]*$/, '') || '/';
-        loadDirectory(parent);
-    });
-
-    goToPathBtn.addEventListener('click', () => {
-        loadDirectory(modalPath.value);
-    });
-
-    modalPath.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') loadDirectory(modalPath.value);
-    });
-
-    async function loadDirectory(path) {
-        try {
-            const data = await invoke('browse_directory', { path });
-            if (data.error) {
-                // Show error inline instead of alert() — native alert breaks GTK signal handlers on Linux
-                dirListing.innerHTML = `<div style="padding: 1rem; text-align: center; color: var(--error);">⚠ ${data.error}</div>`;
-                return;
-            }
-
-            currentBrowsePath = data.currentPath;
-            modalPath.value = data.currentPath;
-            selectFileBtn.disabled = true;
-
-            dirListing.innerHTML = '';
-            let selectedEntry = null;
-
-            for (const entry of data.entries) {
-                const div = document.createElement('div');
-                div.className = 'dir-entry';
-                div.innerHTML = `
-                    <span class="dir-entry-icon">${entry.isDirectory ? '📁' : (entry.isModel ? '📐' : '📄')}</span>
-                    <span class="dir-entry-name">${entry.name}</span>
-                `;
-
-                if (entry.isDirectory) {
-                    div.addEventListener('dblclick', () => loadDirectory(entry.path));
-                } else if (entry.isModel) {
-                    div.addEventListener('click', () => {
-                        if (selectedEntry) selectedEntry.classList.remove('selected');
-                        div.classList.add('selected');
-                        selectedEntry = div;
-                        selectFileBtn.disabled = false;
-                        selectFileBtn._selectedPath = entry.path;
-                        selectFileBtn._selectedName = entry.name;
-                    });
-                    div.addEventListener('dblclick', () => {
-                        selectFile(entry.path, entry.name);
-                    });
-                }
-
-                dirListing.appendChild(div);
-            }
-        } catch (e) {
-            console.error('Browse error:', e);
-        }
-    }
-
-    selectFileBtn.addEventListener('click', () => {
-        if (selectFileBtn._selectedPath) {
-            selectFile(selectFileBtn._selectedPath, selectFileBtn._selectedName);
-        }
-    });
-
-    async function selectFile(path, name) {
-        selectedFilePath = path;
-        modelPathInput.value = name;
+        selectedFilePath = result.path;
+        modelPathInput.value = result.path.split(/[/\\]/).pop(); // show filename only
         densityManuallySet = false;
-        closeModal();
 
         // Fetch point count for auto-density
         try {
-            const data = await invoke('get_fileinfo', { filepath: path });
+            const data = await invoke('get_fileinfo', { filepath: result.path });
             if (data.points) {
                 scanPointCount = data.points;
                 autoCalcDensity();
@@ -181,7 +79,7 @@
             console.error('File info error:', e);
         }
         updateCompareState();
-    }
+    });
 
     // ── Compare ──────────────────────────────────
     compareBtn.addEventListener('click', async () => {

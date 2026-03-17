@@ -100,29 +100,6 @@
             </div>
         </main>
 
-        <!-- File Browser Modal -->
-        <div id="browser-modal" class="modal">
-            <div class="modal-content browser-modal-content">
-                <div class="modal-header">
-                    <h2>Select .xyzrgb File</h2>
-                    <button class="modal-close">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="browser-path">
-                        <button id="parent-dir-btn" class="btn btn-secondary">↑ Parent</button>
-                        <input type="text" id="modal-current-path" class="path-input" value="/">
-                        <button id="go-to-path-btn" class="btn btn-secondary">Go</button>
-                    </div>
-                    <div id="directory-listing" class="directory-listing">
-                        <!-- Directory contents populated by JS -->
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="select-file-btn" class="btn btn-primary" disabled>Select File</button>
-                    <button class="btn btn-secondary modal-cancel">Cancel</button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script src="js/three.min.js"></script>

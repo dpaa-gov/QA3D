@@ -1,7 +1,7 @@
 // QA3D — Electron Main Process
 // Manages the BrowserWindow and Julia sidecar subprocess.
 
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -86,37 +86,14 @@ function sendToSidecar(command) {
 
 // ── IPC Handlers ──────────────────────────────────────
 
-ipcMain.handle('browse_directory', async (_event, { path: dirPath }) => {
-    try {
-        const entries = [];
-        const items = fs.readdirSync(dirPath, { withFileTypes: true });
-
-        for (const item of items) {
-            const fullPath = path.join(dirPath, item.name);
-            const isDir = item.isDirectory();
-            const isModel = !isDir && item.name.toLowerCase().endsWith('.xyzrgb');
-            entries.push({
-                name: item.name,
-                path: fullPath,
-                isDirectory: isDir,
-                isModel,
-            });
-        }
-
-        // Sort: directories first, then alphabetical
-        entries.sort((a, b) => {
-            if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
-            return a.name.localeCompare(b.name);
-        });
-
-        return { entries, currentPath: dirPath };
-    } catch (e) {
-        return { error: e.message.replace(/^ENOENT:\s*/, ''), entries: [] };
-    }
-});
-
-ipcMain.handle('get_homedir', async () => {
-    return { path: os.homedir() };
+ipcMain.handle('select_file', async () => {
+    const result = await dialog.showOpenDialog({
+        title: 'Select .xyzrgb File',
+        filters: [{ name: 'XYZRGB Models', extensions: ['xyzrgb'] }],
+        properties: ['openFile'],
+    });
+    if (result.canceled || result.filePaths.length === 0) return { path: null };
+    return { path: result.filePaths[0] };
 });
 
 ipcMain.handle('get_fileinfo', async (_event, { filepath }) => {
@@ -134,7 +111,9 @@ function createWindow() {
         width: 1400,
         height: 900,
         title: 'QA3D - Quality Assurance 3D',
+        icon: path.join(__dirname, 'public', 'icon.png'),
         autoHideMenuBar: true,
+        show: false,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -142,9 +121,27 @@ function createWindow() {
         },
     });
 
+    win.maximize();
+    win.show();
+
     win.setMenu(null);
 
     win.loadFile(path.join(__dirname, 'public', 'index.html'));
+
+    // Block DevTools and zoom shortcuts on all platforms
+    win.webContents.on('before-input-event', (_event, input) => {
+        if (input.type !== 'keyDown') return;
+        const ctrl = input.control || input.meta;
+        // Block F12, Ctrl+Shift+I (DevTools)
+        if (input.key === 'F12' || (ctrl && input.shift && input.key.toLowerCase() === 'i')) {
+            _event.preventDefault();
+            return;
+        }
+        // Block Ctrl+/-/0 (zoom)
+        if (ctrl && ['+', '-', '=', '0'].includes(input.key)) {
+            _event.preventDefault();
+        }
+    });
 }
 
 // ── App Lifecycle ─────────────────────────────────────
