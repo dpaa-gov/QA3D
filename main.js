@@ -106,6 +106,8 @@ ipcMain.handle('run_compare', async (_event, { filepath, x, y, z, d }) => {
 
 // ── Window ────────────────────────────────────────────
 
+let mainWindow = null;
+
 function createWindow() {
     const win = new BrowserWindow({
         width: 1400,
@@ -142,9 +144,22 @@ function createWindow() {
             _event.preventDefault();
         }
     });
+    mainWindow = win;
 }
-
 // ── App Lifecycle ─────────────────────────────────────
+
+// Single instance lock — focus existing window if user tries to open a second
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+    app.quit();
+} else {
+    app.on('second-instance', () => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
+        }
+    });
+}
 
 // Suppress gl_surface warnings on Linux
 app.commandLine.appendSwitch('disable-gpu-sandbox');
