@@ -1,6 +1,3 @@
-# Build artifacts
-.agent/
-
 # Electron
 node_modules/
 dist/

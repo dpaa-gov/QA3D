@@ -88,8 +88,8 @@ function sendToSidecar(command) {
 
 ipcMain.handle('select_file', async () => {
     const result = await dialog.showOpenDialog({
-        title: 'Select .xyzrgb File',
-        filters: [{ name: 'XYZRGB Models', extensions: ['xyzrgb'] }],
+        title: 'Select 3D Model',
+        filters: [{ name: '3D Models', extensions: ['xyzrgb', 'obj', 'ply', 'stl'] }],
         properties: ['openFile'],
     });
     if (result.canceled || result.filePaths.length === 0) return { path: null };

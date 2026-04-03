@@ -124,6 +124,22 @@
                     <span class="result-value">${data.meanBtoA}</span>
                 </div>
                 <div class="result-row">
+                    <span class="result-label">SD</span>
+                    <span class="result-value">${data.sd}</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">RMSE</span>
+                    <span class="result-value">${data.rmse}</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">TEM</span>
+                    <span class="result-value">${data.tem}</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Max distance</span>
+                    <span class="result-value">${data.maxDist}</span>
+                </div>
+                <div class="result-row">
                     <span class="result-label">Best reflection</span>
                     <span class="result-value">#${data.bestReflection}</span>
                 </div>

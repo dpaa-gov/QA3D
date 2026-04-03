@@ -6,11 +6,11 @@ using MultivariateStats
 using NearestNeighbors
 using Statistics
 
-include("xyzrgb_reader.jl")
+include("mesh_reader.jl")
 include("surface_generator.jl")
 include("registration.jl")
 
-using .XYZRGBReader
+using .MeshReader
 using .SurfaceGenerator
 using .Registration
 
@@ -25,10 +25,11 @@ function handle_command(cmd::Dict)
     try
         if command == "fileinfo"
             filepath = get(cmd, "filepath", "")
-            if !isfile(filepath) || lowercase(splitext(filepath)[2]) != ".xyzrgb"
-                return Dict("error" => "Invalid file")
+            ext = lowercase(splitext(filepath)[2])
+            if !isfile(filepath) || ext ∉ SUPPORTED_EXTENSIONS
+                return Dict("error" => "Unsupported file format. Supported: $(join(SUPPORTED_EXTENSIONS, ", "))")
             end
-            coords = read_xyzrgb(filepath)
+            coords = read_mesh(filepath)
             return Dict("points" => size(coords, 1))
 
         elseif command == "compare"
@@ -38,14 +39,15 @@ function handle_command(cmd::Dict)
             dim_z = Float64(get(cmd, "z", 0.0))
             density = Float64(get(cmd, "d", 1.0))
 
-            if !isfile(filepath) || lowercase(splitext(filepath)[2]) != ".xyzrgb"
-                return Dict("error" => "Invalid .xyzrgb file")
+            ext = lowercase(splitext(filepath)[2])
+            if !isfile(filepath) || ext ∉ SUPPORTED_EXTENSIONS
+                return Dict("error" => "Unsupported file format. Supported: $(join(SUPPORTED_EXTENSIONS, ", "))")
             end
             if dim_x <= 0 || dim_y <= 0 || dim_z <= 0 || density <= 0
                 return Dict("error" => "All dimensions and density must be positive")
             end
 
-            scan_coords = read_xyzrgb(filepath)
+            scan_coords = read_mesh(filepath)
             surface = generate_surface(dim_x, dim_y, dim_z, density)
             result = register(scan_coords, surface)
 

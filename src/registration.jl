@@ -187,12 +187,26 @@ function register(scan::Matrix{Float64}, surface::Matrix{Float64})
     tree_scan = KDTree(best_result')
     _, surf_dists = knn(tree_scan, surf_pca', 1)
 
+    # Combine all per-point distances for aggregate metrics
+    all_dists = vcat(
+        [scan_dists[i][1] for i in eachindex(scan_dists)],
+        [surf_dists[i][1] for i in eachindex(surf_dists)]
+    )
+    sd_val = std(all_dists)
+    rmse_val = sqrt(mean(all_dists .^ 2))
+    tem_val = sqrt(sum(all_dists .^ 2) / (2 * length(all_dists)))
+    max_val = maximum(all_dists)
+
     return Dict(
         "status" => "complete",
         "bestDistance" => round(best_dist, digits=4),
         "bestReflection" => best_reflection,
         "meanAtoB" => round(best_ab, digits=4),
         "meanBtoA" => round(best_ba, digits=4),
+        "sd" => round(sd_val, digits=4),
+        "rmse" => round(rmse_val, digits=4),
+        "tem" => round(tem_val, digits=4),
+        "maxDist" => round(max_val, digits=4),
         "scanCoords" => vec(best_result'),
         "surfCoords" => vec(surf_pca'),
         "scanDistances" => [round(scan_dists[i][1], digits=4) for i in eachindex(scan_dists)],

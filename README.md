@@ -1,4 +1,4 @@
-# Quality Assurance 3D (QA3D) v1.0.0
+# Quality Assurance 3D (QA3D) v1.1.0
 
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
 ![Julia](https://img.shields.io/badge/Julia-1.11-9558B2?logo=julia&logoColor=white)
@@ -7,10 +7,10 @@
 ![Windows](https://img.shields.io/badge/Windows-passing-brightgreen?logo=windows&logoColor=white)
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)
 
-A desktop application for comparing scanned models against generated reference surfaces. QA3D reads `.xyzrgb` scan files, generates a rectangular prism surface from user-specified dimensions, and registers the scan to the surface using PCA alignment and ICP. Built with Electron + Julia.
+A desktop application for comparing scanned models against generated reference surfaces. QA3D reads 3D scan files (`.xyzrgb`, `.obj`, `.ply`, `.stl`), generates a rectangular prism surface from user-specified dimensions, and registers the scan to the surface using PCA alignment and ICP. Built with Electron + Julia.
 
 **Key Features:**
-- **XYZRGB Model Loading** — reads 3D scan data from `.xyzrgb` files
+- **Multi-Format Model Loading** — reads 3D scan data from `.xyzrgb`, `.obj`, `.ply` (ASCII + binary), and `.stl` (ASCII + binary) files
 - **Surface Generation** — creates rectangular prism point clouds from X, Y, Z dimensions
 - **Auto-Density Calculation** — automatically matches surface point density to the scan
 - **PCA + ICP Registration** — point-to-point ICP with 8-axis reflection search (multithreaded, up to 8 threads)
@@ -89,14 +89,14 @@ npm run build
 
 | Platform | Output |
 |----------|--------|
-| **Linux** | `dist/QA3D-1.0.0.AppImage` |
-| **Windows** | `dist/QA3D Setup 1.0.0.exe` |
+| **Linux** | `dist/QA3D-1.1.0.AppImage` |
+| **Windows** | `dist/QA3D Setup 1.1.0.exe` |
 
 ---
 
 ## Usage
 
-1. Click **Browse** to select a `.xyzrgb` scan file
+1. Click **Browse** to select a 3D scan file (`.xyzrgb`, `.obj`, `.ply`, or `.stl`)
 2. Dimensions default to **X**: 20, **Y**: 8.91, **Z**: 34.90 — adjust to match your gauge block
 3. **D** (density) auto-calculates when a file is selected, based on the scan's point count and box surface area:
    ```
@@ -108,7 +108,18 @@ npm run build
 
 ### Example Data
 
-The `test/` directory contains an example gauge block scan (`block.xyzrgb`, 73,254 points). Use dimensions **20 × 8.91 × 34.90 mm** when comparing.
+The `test/` directory contains the same gauge block scan (69,997 vertices) in all supported formats, with both ASCII and binary variants for PLY and STL:
+
+| File | Format |
+|------|--------|
+| `gauge_block.xyzrgb` | XYZRGB point cloud (ASCII) |
+| `gauge_block.obj` | Wavefront OBJ (ASCII) |
+| `gauge_block_binary.ply` | PLY (binary) |
+| `gauge_block_ascii.ply` | PLY (ASCII) |
+| `gauge_block_binary.stl` | STL (binary) |
+| `gauge_block_ascii.stl` | STL (ASCII) |
+
+Use dimensions **20 × 8.91 × 34.90 mm** when comparing.
 
 ### 3D Viewer
 
@@ -132,6 +143,10 @@ Use mouse to **orbit** (left-drag), **zoom** (scroll), and **pan** (right-drag).
 - **Hausdorff (mean)** — average surface deviation; lower = better scanner accuracy
 - **A → B** — mean distance from scan to surface (scanner noise)
 - **B → A** — mean distance from surface to scan (coverage gaps)
+- **SD** — standard deviation of per-point distances; lower = more uniform accuracy
+- **RMSE** — root mean squared error; penalizes large deviations more than mean
+- **TEM** — Technical Error of Measurement (Dahlberg formula); standard QA metric for repeated measurements
+- **Max distance** — largest single-point deviation; identifies worst-case scanner error
 - **Best reflection** — which axis permutation produced the best alignment
 
 ---
@@ -142,7 +157,7 @@ Use mouse to **orbit** (left-drag), **zoom** (scroll), and **pan** (right-drag).
 QA3D/
 ├── src/
 │   ├── QA3D.jl               # Module entry + sidecar command dispatcher
-│   ├── xyzrgb_reader.jl      # .xyzrgb file parser
+│   ├── mesh_reader.jl        # Multi-format parser (xyzrgb, obj, ply, stl)
 │   ├── surface_generator.jl  # Box surface point generator
 │   └── registration.jl       # PCA + point-to-point ICP
 ├── public/
@@ -156,7 +171,12 @@ QA3D/
 │   ├── build_sysimage.jl      # PackageCompiler build script
 │   └── precompile_workload.jl # AOT precompilation workload
 ├── test/                      # Example scan data
-│   └── block.xyzrgb           # Gauge block scan (73K points)
+│   ├── gauge_block.xyzrgb     # Gauge block scan (70K points)
+│   ├── gauge_block.obj        # Same scan as OBJ
+│   ├── gauge_block_binary.ply # Same scan as PLY (binary)
+│   ├── gauge_block_ascii.ply  # Same scan as PLY (ASCII)
+│   ├── gauge_block_binary.stl # Same scan as STL (binary)
+│   └── gauge_block_ascii.stl  # Same scan as STL (ASCII)
 ├── main.js                    # Electron main process
 ├── preload.js                 # Electron IPC bridge
 ├── app.jl                     # Julia dev mode entry point
@@ -166,7 +186,7 @@ QA3D/
 
 ## Citation
 
-Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 1.0.0. Defense POW/MIA Accounting Agency, Offutt AFB, NE.
+Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 1.1.0. Defense POW/MIA Accounting Agency, Offutt AFB, NE.
 
 ## Known Issues
 
