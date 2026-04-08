@@ -1,6 +1,6 @@
 name = "QA3D"
 uuid = "91266f49-abca-4e9b-ad2f-b55d60904961"
-version = "1.1.0"
+version = "1.1.1"
 
 [deps]
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"

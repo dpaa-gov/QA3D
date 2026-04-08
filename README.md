@@ -1,8 +1,8 @@
-# Quality Assurance 3D (QA3D) v1.1.0
+# Quality Assurance 3D (QA3D) v1.1.1
 
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
 ![Julia](https://img.shields.io/badge/Julia-1.11-9558B2?logo=julia&logoColor=white)
-![Electron](https://img.shields.io/badge/Electron-34-47848F?logo=electron&logoColor=white)
+![Electron](https://img.shields.io/badge/Electron-41-47848F?logo=electron&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-passing-brightgreen?logo=linux&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-passing-brightgreen?logo=windows&logoColor=white)
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)
@@ -89,8 +89,8 @@ npm run build
 
 | Platform | Output |
 |----------|--------|
-| **Linux** | `dist/QA3D-1.1.0.AppImage` |
-| **Windows** | `dist/QA3D Setup 1.1.0.exe` |
+| **Linux** | `dist/QA3D-1.1.1.AppImage` |
+| **Windows** | `dist/QA3D Setup 1.1.1.exe` |
 
 ---
 
@@ -186,7 +186,7 @@ QA3D/
 
 ## Citation
 
-Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 1.1.0. Defense POW/MIA Accounting Agency, Offutt AFB, NE.
+Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 1.1.1. Defense POW/MIA Accounting Agency, Offutt AFB, NE.
 
 ## Known Issues
 
