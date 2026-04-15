@@ -1,4 +1,4 @@
-// QA3D 3D Viewer — Three.js point cloud visualization with distance heatmap
+// QA3D 3D Viewer — Three.js point cloud + mesh visualization with distance heatmap
 // Depends on THREE + TrackballControls
 
 const Viewer = (function () {
@@ -6,13 +6,18 @@ const Viewer = (function () {
 
     let scene, camera, renderer, controls;
     let scanCloud = null, surfCloud = null;
+    let scanMesh = null;  // THREE.Mesh for scan (when faces available)
+    let surfMesh = null;  // THREE.Mesh for surface (always available — generated grid)
     let legendEl = null;
     let currentMode = 'heatmap'; // 'heatmap' or 'dual'
+    let renderMode = 'pointcloud'; // 'pointcloud' or 'mesh'
     let storedData = null;
     let containerId = null;
     let initialized = false;
     let currentColormap = 'green-red';
     let currentPointSize = 0.4;
+    let scanVisible = true;
+    let surfVisible = true;
 
     // ── Colormap definitions ────────────────────────
     const colormaps = {
@@ -120,13 +125,19 @@ const Viewer = (function () {
         controls.panSpeed = 0.3;
         controls.staticMoving = true;
         controls.mouseButtons = {
-            LEFT: 0,     // left-click triggers ROTATE (no landmarks in QA3D)
+            LEFT: 0,     // left-click triggers ROTATE
             MIDDLE: 1,   // middle-click triggers ZOOM
             RIGHT: 2     // right-click triggers PAN
         };
 
-        // Ambient light
-        scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+        // Ambient + directional light (directional needed for mesh shading)
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(1, 1, 1);
+        scene.add(dirLight);
+        const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+        dirLight2.position.set(-1, -1, -0.5);
+        scene.add(dirLight2);
 
         // Resize handling
         const ro = new ResizeObserver(() => {
@@ -163,6 +174,24 @@ const Viewer = (function () {
         return new THREE.Points(geometry, material);
     }
 
+    // ── Build mesh geometry from faces ──────────────
+    function createMeshObject(coords, faces, colors) {
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(coords, 3));
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(faces), 1));
+        geometry.computeVertexNormals();
+
+        const material = new THREE.MeshPhongMaterial({
+            vertexColors: true,
+            side: THREE.DoubleSide,
+            shininess: 30,
+            flatShading: false
+        });
+
+        return new THREE.Mesh(geometry, material);
+    }
+
     // ── Recompute heatmap colors from stored distances ──
     function recomputeHeatColors() {
         if (!storedData) return;
@@ -185,14 +214,20 @@ const Viewer = (function () {
         }
     }
 
+    // ── Remove all scene objects ────────────────────
+    function removeAllObjects() {
+        if (scanCloud) { scene.remove(scanCloud); scanCloud.geometry.dispose(); scanCloud = null; }
+        if (surfCloud) { scene.remove(surfCloud); surfCloud.geometry.dispose(); surfCloud = null; }
+        if (scanMesh) { scene.remove(scanMesh); scanMesh.geometry.dispose(); scanMesh = null; }
+        if (surfMesh) { scene.remove(surfMesh); surfMesh.geometry.dispose(); surfMesh = null; }
+    }
+
     // ── Load comparison results ─────────────────────
     function loadResults(data) {
         ensureInitialized();
         storedData = data;
 
-        // Remove old clouds
-        if (scanCloud) { scene.remove(scanCloud); scanCloud.geometry.dispose(); }
-        if (surfCloud) { scene.remove(surfCloud); surfCloud.geometry.dispose(); }
+        removeAllObjects();
 
         // Build heatmap colors for scan
         const scanCoords = new Float32Array(data.scanCoords);
@@ -209,7 +244,7 @@ const Viewer = (function () {
         storedData.scanCoordsF32 = scanCoords;
         storedData.surfCoordsF32 = surfCoords;
 
-        // Find global min/max for consistent scale (loop to avoid stack overflow with large arrays)
+        // Find global min/max for consistent scale
         let minDist = Infinity, maxDist = -Infinity;
         for (let i = 0; i < scanDists.length; i++) {
             if (scanDists[i] < minDist) minDist = scanDists[i];
@@ -242,7 +277,11 @@ const Viewer = (function () {
             storedData.surfDualColors[i * 3 + 2] = 0.9;
         }
 
-        // Default to heatmap mode
+        // Reset visibility
+        scanVisible = true;
+        surfVisible = true;
+
+        // Default to heatmap + pointcloud mode
         applyMode('heatmap');
 
         // Auto-fit camera
@@ -256,21 +295,43 @@ const Viewer = (function () {
         currentMode = mode;
         if (!storedData) return;
 
-        if (scanCloud) { scene.remove(scanCloud); scanCloud.geometry.dispose(); }
-        if (surfCloud) { scene.remove(surfCloud); surfCloud.geometry.dispose(); }
+        removeAllObjects();
 
-        if (mode === 'heatmap') {
-            scanCloud = createPointCloud(storedData.scanCoordsF32, storedData.scanHeatColors, currentPointSize);
-            surfCloud = createPointCloud(storedData.surfCoordsF32, storedData.surfHeatColors, currentPointSize);
-            if (legendEl) legendEl.style.display = '';
-        } else {
-            scanCloud = createPointCloud(storedData.scanCoordsF32, storedData.scanDualColors, currentPointSize);
-            surfCloud = createPointCloud(storedData.surfCoordsF32, storedData.surfDualColors, currentPointSize);
-            if (legendEl) legendEl.style.display = 'none';
+        const scanColors = mode === 'heatmap' ? storedData.scanHeatColors : storedData.scanDualColors;
+        const surfColors = mode === 'heatmap' ? storedData.surfHeatColors : storedData.surfDualColors;
+
+        // Always create point clouds
+        scanCloud = createPointCloud(storedData.scanCoordsF32, scanColors, currentPointSize);
+        surfCloud = createPointCloud(storedData.surfCoordsF32, surfColors, currentPointSize);
+
+        // Create mesh for scan if faces available
+        if (storedData.scanFaces) {
+            scanMesh = createMeshObject(storedData.scanCoordsF32, storedData.scanFaces, scanColors);
         }
+
+        // Create mesh for surface if faces available
+        if (storedData.surfFaces) {
+            surfMesh = createMeshObject(storedData.surfCoordsF32, storedData.surfFaces, surfColors);
+        }
+
+        // Set visibility based on render mode and visibility state
+        updateVisibility();
 
         scene.add(scanCloud);
         scene.add(surfCloud);
+        if (scanMesh) scene.add(scanMesh);
+        if (surfMesh) scene.add(surfMesh);
+
+        if (legendEl) legendEl.style.display = mode === 'heatmap' ? '' : 'none';
+    }
+
+    function updateVisibility() {
+        const useMesh = renderMode === 'mesh';
+
+        if (scanCloud) scanCloud.visible = scanVisible && (!useMesh || !scanMesh);
+        if (scanMesh) scanMesh.visible = scanVisible && useMesh;
+        if (surfCloud) surfCloud.visible = surfVisible && (!useMesh || !surfMesh);
+        if (surfMesh) surfMesh.visible = surfVisible && useMesh;
     }
 
     function toggleMode() {
@@ -279,6 +340,23 @@ const Viewer = (function () {
     }
 
     function getMode() { return currentMode; }
+
+    function setRenderMode(mode) {
+        renderMode = mode;
+        updateVisibility();
+    }
+
+    function getRenderMode() { return renderMode; }
+
+    function setScanVisible(visible) {
+        scanVisible = visible;
+        updateVisibility();
+    }
+
+    function setSurfVisible(visible) {
+        surfVisible = visible;
+        updateVisibility();
+    }
 
     // ── Fit camera to bounding box ──────────────────
     function fitCamera(coords1, coords2) {
@@ -350,10 +428,12 @@ const Viewer = (function () {
     }
 
     function clear() {
-        if (scanCloud) { scene.remove(scanCloud); scanCloud.geometry.dispose(); scanCloud = null; }
-        if (surfCloud) { scene.remove(surfCloud); surfCloud.geometry.dispose(); surfCloud = null; }
+        removeAllObjects();
         if (legendEl) { legendEl.remove(); legendEl = null; }
         storedData = null;
+        renderMode = 'pointcloud';
+        scanVisible = true;
+        surfVisible = true;
     }
 
     function setPointSize(size) {
@@ -362,5 +442,10 @@ const Viewer = (function () {
         if (surfCloud) surfCloud.material.size = size;
     }
 
-    return { init, loadResults, toggleMode, getMode, setColormap, setPointSize, clear };
+    return {
+        init, loadResults, toggleMode, getMode,
+        setColormap, setPointSize, clear,
+        setRenderMode, getRenderMode,
+        setScanVisible, setSurfVisible
+    };
 })();

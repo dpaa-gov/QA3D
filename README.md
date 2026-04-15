@@ -1,4 +1,4 @@
-# Quality Assurance 3D (QA3D) v1.1.1
+# Quality Assurance 3D (QA3D) v1.1.2
 
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
 ![Julia](https://img.shields.io/badge/Julia-1.11-9558B2?logo=julia&logoColor=white)
@@ -11,10 +11,10 @@ A desktop application for comparing scanned models against generated reference s
 
 **Key Features:**
 - **Multi-Format Model Loading** — reads 3D scan data from `.xyzrgb`, `.obj`, `.ply` (ASCII + binary), and `.stl` (ASCII + binary) files
-- **Surface Generation** — creates rectangular prism point clouds from X, Y, Z dimensions
+- **Surface Generation** — creates rectangular prism surfaces from X, Y, Z dimensions
 - **Auto-Density Calculation** — automatically matches surface point density to the scan
 - **PCA + ICP Registration** — point-to-point ICP with 8-axis reflection search (multithreaded, up to 8 threads)
-- **3D Visualization** — interactive Three.js viewer with distance heatmap and dual-color modes
+- **3D Visualization** — interactive Three.js viewer with distance heatmap, dual-color modes, point cloud / mesh rendering toggle, and per-cloud visibility controls
 
 ## Architecture
 
@@ -89,8 +89,8 @@ npm run build
 
 | Platform | Output |
 |----------|--------|
-| **Linux** | `dist/QA3D-1.1.1.AppImage` |
-| **Windows** | `dist/QA3D Setup 1.1.1.exe` |
+| **Linux** | `dist/QA3D-1.1.2.AppImage` |
+| **Windows** | `dist/QA3D Setup 1.1.2.exe` |
 
 ---
 
@@ -123,10 +123,12 @@ Use dimensions **20 × 8.91 × 34.90 mm** when comparing.
 
 ### 3D Viewer
 
-After a comparison completes, the viewer displays both point clouds registered together:
+After a comparison completes, the viewer displays both clouds registered together:
 
-- **Heatmap mode** (default) — each point is colored green → yellow → red by its distance to the nearest point on the other cloud. The color legend shows the auto-scaled distance range.
-- **Dual color mode** — scan points shown in gold, reference surface in blue, for visual separation. Toggle between modes with the 🎨 button above the viewer.
+- **Heatmap mode** (default) — each point/face is colored green → yellow → red by its distance to the nearest point on the other cloud. The color legend shows the auto-scaled distance range.
+- **Dual color mode** — scan shown in gold, reference surface in blue. Toggle between modes with the 🎨 button above the viewer.
+- **Point Cloud / Mesh toggle** — switch between point cloud and solid mesh rendering. Mesh mode is available for PLY, OBJ, and STL files; the generated surface always supports mesh.
+- **Visibility checkboxes** — show or hide the scan and surface independently.
 
 Use mouse to **orbit** (left-drag), **zoom** (scroll), and **pan** (right-drag).
 
@@ -186,7 +188,7 @@ QA3D/
 
 ## Citation
 
-Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 1.1.1. Defense POW/MIA Accounting Agency, Offutt AFB, NE.
+Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 1.1.2. Defense POW/MIA Accounting Agency, Offutt AFB, NE.
 
 ## Known Issues
 

@@ -401,6 +401,24 @@ body {
     text-align: center;
 }
 
+/* ── Visibility Checkboxes ───────────────────── */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.checkbox-label input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
 /* ── Color Legend ─────────────────────────────── */
 .color-legend {
     position: absolute;

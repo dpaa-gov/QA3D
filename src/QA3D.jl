@@ -29,8 +29,8 @@ function handle_command(cmd::Dict)
             if !isfile(filepath) || ext ∉ SUPPORTED_EXTENSIONS
                 return Dict("error" => "Unsupported file format. Supported: $(join(SUPPORTED_EXTENSIONS, ", "))")
             end
-            coords = read_mesh(filepath)
-            return Dict("points" => size(coords, 1))
+            mesh = read_mesh(filepath)
+            return Dict("points" => size(mesh.coords, 1), "hasFaces" => mesh.faces !== nothing)
 
         elseif command == "compare"
             filepath = get(cmd, "filepath", "")
@@ -47,13 +47,22 @@ function handle_command(cmd::Dict)
                 return Dict("error" => "All dimensions and density must be positive")
             end
 
-            scan_coords = read_mesh(filepath)
-            surface = generate_surface(dim_x, dim_y, dim_z, density)
-            result = register(scan_coords, surface)
+            mesh = read_mesh(filepath)
+            surf_mesh = generate_surface(dim_x, dim_y, dim_z, density)
+            result = register(mesh.coords, surf_mesh.coords)
 
             result["success"] = true
-            result["scanPoints"] = size(scan_coords, 1)
-            result["surfacePoints"] = size(surface, 1)
+            result["scanPoints"] = size(mesh.coords, 1)
+            result["surfacePoints"] = size(surf_mesh.coords, 1)
+
+            # Include face indices if available (convert to 0-based for JS)
+            if mesh.faces !== nothing
+                result["scanFaces"] = vec(mesh.faces' .- 1)
+            end
+            if surf_mesh.faces !== nothing
+                result["surfFaces"] = vec(surf_mesh.faces' .- 1)
+            end
+            result["hasFaces"] = mesh.faces !== nothing
 
             return result
 

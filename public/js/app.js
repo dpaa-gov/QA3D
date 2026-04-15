@@ -9,6 +9,7 @@
     let selectedFilePath = '';
     let scanPointCount = 0;
     let densityManuallySet = false;
+    let fileHasFaces = false;
 
     // ── DOM Elements ─────────────────────────────
     const modelPathInput = document.getElementById('model-path');
@@ -26,6 +27,11 @@
     const pointSizeControl = document.getElementById('point-size-control');
     const pointSizeSlider = document.getElementById('point-size-slider');
     const pointSizeValue = document.getElementById('point-size-value');
+    const visibilityControls = document.getElementById('visibility-controls');
+    const showScanCheckbox = document.getElementById('show-scan');
+    const showSurfaceCheckbox = document.getElementById('show-surface');
+    const renderModeControl = document.getElementById('render-mode-control');
+    const renderModeSelect = document.getElementById('render-mode-select');
 
     // Initialize 3D viewer
     if (typeof Viewer !== 'undefined') Viewer.init('viewer-container');
@@ -68,15 +74,17 @@
         modelPathInput.value = result.path.split(/[/\\]/).pop(); // show filename only
         densityManuallySet = false;
 
-        // Fetch point count for auto-density
+        // Fetch point count and face info for auto-density
         try {
             const data = await invoke('get_fileinfo', { filepath: result.path });
             if (data.points) {
                 scanPointCount = data.points;
                 autoCalcDensity();
             }
+            fileHasFaces = data.hasFaces || false;
         } catch (e) {
             console.error('File info error:', e);
+            fileHasFaces = false;
         }
         updateCompareState();
     });
@@ -152,6 +160,16 @@
                 toggleModeBtn.classList.remove('hidden');
                 colormapSelect.classList.remove('hidden');
                 pointSizeControl.classList.remove('hidden');
+                visibilityControls.classList.remove('hidden');
+
+                // Show render mode toggle (always available — surface always has mesh)
+                renderModeControl.classList.remove('hidden');
+
+                // Reset checkboxes
+                showScanCheckbox.checked = true;
+                showSurfaceCheckbox.checked = true;
+                renderModeSelect.value = 'pointcloud';
+
                 Viewer.loadResults(data);
             }
         } catch (e) {
@@ -172,6 +190,7 @@
         dimD.value = '0.1';
         scanPointCount = 0;
         densityManuallySet = false;
+        fileHasFaces = false;
         resultsSection.classList.add('hidden');
         clearBtn.classList.add('hidden');
         toggleModeBtn.classList.add('hidden');
@@ -180,11 +199,16 @@
         pointSizeControl.classList.add('hidden');
         pointSizeSlider.value = '0.4';
         pointSizeValue.textContent = '0.4';
+        visibilityControls.classList.add('hidden');
+        renderModeControl.classList.add('hidden');
+        renderModeSelect.value = 'pointcloud';
+        showScanCheckbox.checked = true;
+        showSurfaceCheckbox.checked = true;
         if (typeof Viewer !== 'undefined') Viewer.clear();
         updateCompareState();
     });
 
-    // ── Toggle viewer mode ──────────────────────────
+    // ── Toggle viewer color mode ────────────────
     toggleModeBtn.addEventListener('click', () => {
         const mode = typeof Viewer !== 'undefined' ? Viewer.toggleMode() : 'heatmap';
         toggleModeBtn.textContent = mode === 'heatmap' ? '🎨 Dual Color' : '🌡️ Heatmap';
@@ -192,16 +216,32 @@
         colormapSelect.classList.toggle('hidden', mode !== 'heatmap');
     });
 
-    // ── Colormap selector ───────────────────────────
+    // ── Colormap selector ───────────────────────
     colormapSelect.addEventListener('change', (e) => {
         if (typeof Viewer !== 'undefined') Viewer.setColormap(e.target.value);
     });
 
-    // ── Point size slider ───────────────────────────
+    // ── Point size slider ───────────────────────
     pointSizeSlider.addEventListener('input', (e) => {
         const size = parseFloat(e.target.value);
         pointSizeValue.textContent = size.toFixed(1);
         if (typeof Viewer !== 'undefined') Viewer.setPointSize(size);
+    });
+
+    // ── Visibility checkboxes ───────────────────
+    showScanCheckbox.addEventListener('change', (e) => {
+        if (typeof Viewer !== 'undefined') Viewer.setScanVisible(e.target.checked);
+    });
+
+    showSurfaceCheckbox.addEventListener('change', (e) => {
+        if (typeof Viewer !== 'undefined') Viewer.setSurfVisible(e.target.checked);
+    });
+
+    // ── Render mode selector ────────────────────
+    renderModeSelect.addEventListener('change', (e) => {
+        if (typeof Viewer !== 'undefined') Viewer.setRenderMode(e.target.value);
+        // Show/hide point size control based on render mode
+        pointSizeControl.classList.toggle('hidden', e.target.value === 'mesh');
     });
 
 })();
