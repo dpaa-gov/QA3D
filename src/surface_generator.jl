@@ -2,6 +2,7 @@ module SurfaceGenerator
 
 export generate_surface
 
+using LinearAlgebra
 using ..MeshReader: MeshData
 
 """
@@ -80,7 +81,36 @@ function generate_surface(x::Float64, y::Float64, z::Float64, d::Float64)
         face_mat[i, :] = faces[i]
     end
 
-    return MeshData(mat, face_mat)
+    # Compute per-vertex normals (face-area-weighted)
+    normals = zeros(Float64, n, 3)
+    for i in 1:nf
+        i1, i2, i3 = face_mat[i, 1], face_mat[i, 2], face_mat[i, 3]
+        v1 = mat[i1, :]
+        v2 = mat[i2, :]
+        v3 = mat[i3, :]
+        edge1 = v2 .- v1
+        edge2 = v3 .- v1
+        fn = cross(edge1, edge2)  # area-weighted (magnitude = 2× triangle area)
+        normals[i1, :] .+= fn
+        normals[i2, :] .+= fn
+        normals[i3, :] .+= fn
+    end
+
+    # Normalize and orient outward from prism centroid
+    centroid = [x / 2.0, y / 2.0, z / 2.0]
+    for i in 1:n
+        nrm = norm(normals[i, :])
+        if nrm > 0
+            normals[i, :] ./= nrm
+        end
+        # Flip if pointing toward centroid (inward)
+        outward = mat[i, :] .- centroid
+        if dot(normals[i, :], outward) < 0
+            normals[i, :] .*= -1
+        end
+    end
+
+    return MeshData(mat, face_mat, normals)
 end
 
 end # module

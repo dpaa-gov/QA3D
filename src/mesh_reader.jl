@@ -10,12 +10,14 @@ const SUPPORTED_EXTENSIONS = Set([".xyzrgb", ".obj", ".ply", ".stl"])
     MeshData
 
 Container for mesh vertices and optional face indices.
-- `coords`: Nx3 Float64 matrix of vertex positions
-- `faces`:  Mx3 Int matrix of triangle indices (1-based), or `nothing` for point clouds
+- `coords`:  Nx3 Float64 matrix of vertex positions
+- `faces`:   Mx3 Int matrix of triangle indices (1-based), or `nothing` for point clouds
+- `normals`: Nx3 Float64 matrix of per-vertex normals, or `nothing`
 """
 struct MeshData
     coords::Matrix{Float64}
     faces::Union{Matrix{Int}, Nothing}
+    normals::Union{Matrix{Float64}, Nothing}
 end
 
 """
@@ -64,7 +66,7 @@ function read_xyzrgb(filepath::String)
         push!(coords, [x, y, z])
     end
 
-    return MeshData(_to_matrix(coords, filepath), nothing)
+    return MeshData(_to_matrix(coords, filepath), nothing, nothing)
 end
 
 # ── OBJ ──────────────────────────────────────────────────────
@@ -113,7 +115,7 @@ function read_obj(filepath::String)
 
     mat = _to_matrix(coords, filepath)
     face_mat = length(faces) > 0 ? _faces_to_matrix(faces) : nothing
-    return MeshData(mat, face_mat)
+    return MeshData(mat, face_mat, nothing)
 end
 
 # ── PLY ──────────────────────────────────────────────────────
@@ -246,7 +248,7 @@ function _read_ply_ascii(filepath, header_lines, n_vertices, n_faces, xi, yi, zi
 
     mat = _to_matrix(coords, filepath)
     face_mat = length(faces) > 0 ? _faces_to_matrix(faces) : nothing
-    return MeshData(mat, face_mat)
+    return MeshData(mat, face_mat, nothing)
 end
 
 const PLY_TYPE_SIZES = Dict(
@@ -338,7 +340,7 @@ function _read_ply_binary(filepath, header_byte_offset, n_vertices, n_faces,
     end
 
     face_mat = length(faces) > 0 ? _faces_to_matrix(faces) : nothing
-    return MeshData(mat, face_mat)
+    return MeshData(mat, face_mat, nothing)
 end
 
 # ── STL ──────────────────────────────────────────────────────
@@ -445,7 +447,7 @@ function _stl_dedup_with_faces(raw_coords::Vector{Vector{Float64}}, filepath::St
 
     mat = _to_matrix(unique_coords, filepath)
     face_mat = _faces_to_matrix(faces)
-    return MeshData(mat, face_mat)
+    return MeshData(mat, face_mat, nothing)
 end
 
 # ── Helpers ──────────────────────────────────────────────────

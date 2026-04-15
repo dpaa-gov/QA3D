@@ -38,6 +38,7 @@ function handle_command(cmd::Dict)
             dim_y = Float64(get(cmd, "y", 0.0))
             dim_z = Float64(get(cmd, "z", 0.0))
             density = Float64(get(cmd, "d", 1.0))
+            tolerance = Float64(get(cmd, "tolerance", 0.05))
 
             ext = lowercase(splitext(filepath)[2])
             if !isfile(filepath) || ext ∉ SUPPORTED_EXTENSIONS
@@ -49,7 +50,9 @@ function handle_command(cmd::Dict)
 
             mesh = read_mesh(filepath)
             surf_mesh = generate_surface(dim_x, dim_y, dim_z, density)
-            result = register(mesh.coords, surf_mesh.coords)
+            result = register(mesh.coords, surf_mesh.coords;
+                              ref_normals=surf_mesh.normals,
+                              tolerance=tolerance)
 
             result["success"] = true
             result["scanPoints"] = size(mesh.coords, 1)

@@ -100,8 +100,154 @@ ipcMain.handle('get_fileinfo', async (_event, { filepath }) => {
     return sendToSidecar({ command: 'fileinfo', filepath });
 });
 
-ipcMain.handle('run_compare', async (_event, { filepath, x, y, z, d }) => {
-    return sendToSidecar({ command: 'compare', filepath, x, y, z, d });
+ipcMain.handle('run_compare', async (_event, { filepath, x, y, z, d, tolerance }) => {
+    return sendToSidecar({ command: 'compare', filepath, x, y, z, d, tolerance });
+});
+
+ipcMain.handle('save_report', async (_event, { reportData, defaultName }) => {
+    const result = await dialog.showSaveDialog({
+        title: 'Save QA3D Report',
+        defaultPath: defaultName || 'QA3D_Report.pdf',
+        filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
+    });
+    if (result.canceled || !result.filePath) return { saved: false };
+
+    const d = reportData;
+    const signedStr = d.signedMean >= 0
+        ? `+${d.signedMean.toFixed(6)}`
+        : d.signedMean.toFixed(6);
+
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        background: #fff; color: #1a1d23; padding: 30px 50px;
+        font-size: 12px; line-height: 1.45;
+    }
+    .header {
+        display: flex; justify-content: space-between; align-items: flex-end;
+        border-bottom: 3px solid #d4a843; padding-bottom: 8px; margin-bottom: 14px;
+    }
+    .header h1 { font-size: 24px; font-weight: 700; color: #1a1d23; }
+    .header h1 span { color: #d4a843; }
+    .header .subtitle { font-size: 11px; color: #6b7280; text-align: right; }
+    .section { margin-bottom: 10px; }
+    .section h2 {
+        font-size: 10px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 1.5px; color: #d4a843; margin-bottom: 4px;
+        border-bottom: 1px solid #e5e7eb; padding-bottom: 3px;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 2px 0; vertical-align: top; }
+    td:first-child { color: #6b7280; width: 55%; }
+    td:last-child { font-weight: 500; text-align: right; font-family: 'Consolas', 'Monaco', monospace; }
+    .input-table td:first-child { width: 30%; }
+    .pass { color: #16a34a; font-weight: 600; }
+    .warn { color: #ea580c; font-weight: 600; }
+    .fail { color: #dc2626; font-weight: 600; }
+    .signed-pos { color: #ea580c; }
+    .signed-neg { color: #2563eb; }
+    .footer {
+        margin-top: 16px; padding-top: 8px; border-top: 1px solid #e5e7eb;
+        font-size: 10px; color: #9ca3af; text-align: center;
+    }
+</style></head><body>
+
+<div class="header">
+    <h1>QA<span>3D</span> &mdash; Quality Assurance Report</h1>
+    <div class="subtitle">Generated: ${d.timestamp}<br>QA3D v1.2.0</div>
+</div>
+
+<div class="section">
+    <h2>Input</h2>
+    <table class="input-table">
+        <tr><td>File</td><td>${d.fileName}</td></tr>
+        <tr><td>Dimensions</td><td>${d.dimX} × ${d.dimY} × ${d.dimZ} mm</td></tr>
+        <tr><td>Density</td><td>${d.density}</td></tr>
+        <tr><td>Tolerance</td><td>${d.tolerance} mm</td></tr>
+    </table>
+</div>
+
+<div class="section">
+    <h2>Point Counts</h2>
+    <table>
+        <tr><td>Scan Points</td><td>${d.scanPoints.toLocaleString()}</td></tr>
+        <tr><td>Surface Points</td><td>${d.surfacePoints.toLocaleString()}</td></tr>
+    </table>
+</div>
+
+<div class="section">
+    <h2>Distance Metrics</h2>
+    <table>
+        <tr><td>Chamfer Distance</td><td>${d.chamferDist}</td></tr>
+        <tr><td>Scan → Reference</td><td>${d.meanAtoB}</td></tr>
+        <tr><td>Reference → Scan</td><td>${d.meanBtoA}</td></tr>
+        <tr><td>Signed Mean</td><td class="${d.signedMean >= 0 ? 'signed-pos' : 'signed-neg'}">${signedStr}</td></tr>
+        <tr><td>SD</td><td>${d.sd}</td></tr>
+        <tr><td>RMSE</td><td>${d.rmse}</td></tr>
+        <tr><td>TEM</td><td>${d.tem}</td></tr>
+        <tr><td>Max Distance (S→R)</td><td>${d.maxAtoB}</td></tr>
+        <tr><td>Max Distance (R→S)</td><td>${d.maxBtoA}</td></tr>
+    </table>
+</div>
+
+<div class="section">
+    <h2>Percentile Metrics</h2>
+    <table>
+        <tr><td>95th Percentile (S→R)</td><td>${d.p95AtoB}</td></tr>
+        <tr><td>95th Percentile (R→S)</td><td>${d.p95BtoA}</td></tr>
+        <tr><td>95th Percentile (Bidirectional)</td><td>${d.p95Bidir}</td></tr>
+    </table>
+</div>
+
+<div class="section">
+    <h2>Tolerance Analysis</h2>
+    <table>
+        <tr>
+            <td>In-Tolerance (≤ ${d.tolerance} mm)</td>
+            <td class="${d.yieldPct >= 95 ? 'pass' : d.yieldPct >= 80 ? 'warn' : 'fail'}">${d.yieldPct}%</td>
+        </tr>
+    </table>
+</div>
+
+<div class="section">
+    <h2>Registration</h2>
+    <table>
+        <tr><td>Best Reflection</td><td>#${d.bestReflection}</td></tr>
+    </table>
+</div>
+
+<div class="footer">
+    QA3D — Quality Assurance 3D &bull; Defense POW/MIA Accounting Agency
+</div>
+
+</body></html>`;
+
+    // Render PDF via hidden BrowserWindow
+    let pdfWin = null;
+    try {
+        pdfWin = new BrowserWindow({
+            show: false, width: 800, height: 1000,
+            webPreferences: { contextIsolation: true, nodeIntegration: false }
+        });
+
+        await pdfWin.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+
+        const pdfBuffer = await pdfWin.webContents.printToPDF({
+            printBackground: true,
+            pageSize: 'Letter',
+            margins: { top: 0, bottom: 0, left: 0, right: 0 }
+        });
+
+        fs.writeFileSync(result.filePath, pdfBuffer);
+        return { saved: true, path: result.filePath };
+    } catch (e) {
+        return { saved: false, error: e.message };
+    } finally {
+        if (pdfWin) pdfWin.destroy();
+    }
 });
 
 // ── Window ────────────────────────────────────────────
@@ -111,7 +257,7 @@ let mainWindow = null;
 function createWindow() {
     const win = new BrowserWindow({
         width: 1400,
-        height: 900,
+        height: 1000,
         title: 'QA3D - Quality Assurance 3D',
         icon: path.join(__dirname, 'public', 'icon.png'),
         autoHideMenuBar: true,

@@ -119,13 +119,12 @@ function run_icp(fixed::Matrix{Float64}, moving::Matrix{Float64};
     return current
 end
 
-# ── Bidirectional Hausdorff (mean of means) ──────────────────
+# ── Bidirectional Mean Distance (Chamfer Distance) ───────────
 """
-Bidirectional mean Hausdorff distance.
+Bidirectional mean distance (Chamfer distance).
 Returns (mean_of_means, mean_A_to_B, mean_B_to_A).
-Matches R implementation: mean(mean_AB, mean_BA).
 """
-function hausdorff_bidirectional(A::Matrix{Float64}, B::Matrix{Float64})
+function bidirectional_mean_distance(A::Matrix{Float64}, B::Matrix{Float64})
     # A → B
     tree_b = KDTree(B')
     _, dists_ab = knn(tree_b, A', 1)
@@ -140,17 +139,32 @@ function hausdorff_bidirectional(A::Matrix{Float64}, B::Matrix{Float64})
 end
 
 """
-    register(scan, surface) -> Dict
+    register(scan, surface; ref_normals, tolerance) -> Dict
 
 1. PCA-align both point clouds
 2. Try all 8 axis reflections
 3. Point-to-point ICP for each
-4. Return best (lowest bidirectional Hausdorff) with per-point data
+4. Return best (lowest bidirectional mean distance) with per-point data and QA metrics
+
+`ref_normals` — Nx3 matrix of per-vertex normals for the reference surface (for signed distance).
+`tolerance`   — distance threshold for in-tolerance yield calculation.
 """
-function register(scan::Matrix{Float64}, surface::Matrix{Float64})
+function register(scan::Matrix{Float64}, surface::Matrix{Float64};
+                  ref_normals::Union{Matrix{Float64}, Nothing}=nothing,
+                  tolerance::Float64=0.05)
     # PCA alignment (matches R: scale + eigen(var))
     scan_pca = pca_align(scan)
     surf_pca = pca_align(surface)
+
+    # PCA-align the reference normals using the same eigenvector rotation
+    surf_normals_pca = nothing
+    if ref_normals !== nothing
+        centered_surf = surface .- mean(surface, dims=1)
+        C = cov(centered_surf)
+        eig = eigen(C)
+        rot = eig.vectors[:, end:-1:1]
+        surf_normals_pca = ref_normals * rot
+    end
 
     best_dist = Inf
     best_result = scan_pca
@@ -163,8 +177,8 @@ function register(scan::Matrix{Float64}, surface::Matrix{Float64})
         Threads.@spawn begin
             reflected = apply_reflection(scan_pca, refl)
             registered = run_icp(surf_pca, reflected)
-            dist, ab, ba = hausdorff_bidirectional(registered, surf_pca)
-            @info "Reflection $j $(refl): Hausdorff = $(round(dist, digits=4)) (A→B: $(round(ab, digits=4)), B→A: $(round(ba, digits=4)))"
+            dist, ab, ba = bidirectional_mean_distance(registered, surf_pca)
+            @info "Reflection $j $(refl): Chamfer = $(round(dist, digits=4)) (A→B: $(round(ab, digits=4)), B→A: $(round(ba, digits=4)))"
             (j, refl, dist, ab, ba, registered)
         end
     end
@@ -180,26 +194,53 @@ function register(scan::Matrix{Float64}, surface::Matrix{Float64})
         end
     end
 
-    # Compute per-point distances for visualization
+    # Compute per-point unsigned distances for visualization
     tree_surf = KDTree(surf_pca')
-    _, scan_dists = knn(tree_surf, best_result', 1)
+    idxs_scan, scan_dists = knn(tree_surf, best_result', 1)
 
     tree_scan = KDTree(best_result')
     _, surf_dists = knn(tree_scan, surf_pca', 1)
 
+    # Flatten distance arrays
+    scan_dist_vec = [scan_dists[i][1] for i in eachindex(scan_dists)]
+    surf_dist_vec = [surf_dists[i][1] for i in eachindex(surf_dists)]
+
     # Combine all per-point distances for aggregate metrics
-    all_dists = vcat(
-        [scan_dists[i][1] for i in eachindex(scan_dists)],
-        [surf_dists[i][1] for i in eachindex(surf_dists)]
-    )
+    all_dists = vcat(scan_dist_vec, surf_dist_vec)
     sd_val = std(all_dists)
     rmse_val = sqrt(mean(all_dists .^ 2))
     tem_val = sqrt(sum(all_dists .^ 2) / (2 * length(all_dists)))
     max_val = maximum(all_dists)
+    max_ab = maximum(scan_dist_vec)
+    max_ba = maximum(surf_dist_vec)
+
+    # ── 95th Percentile Error ────────────────────────
+    p95_ab = quantile(scan_dist_vec, 0.95)
+    p95_ba = quantile(surf_dist_vec, 0.95)
+    p95_bidir = quantile(all_dists, 0.95)
+
+    # ── In-Tolerance Yield (%) ───────────────────────
+    yield_pct = count(d -> d <= tolerance, scan_dist_vec) / length(scan_dist_vec) * 100
+
+    # ── Signed Mean Distance (Scan → Reference) ─────
+    signed_mean = 0.0
+    scan_signed_dists = zeros(Float64, length(scan_dist_vec))
+    if surf_normals_pca !== nothing
+        idx_vec = [idxs_scan[i][1] for i in eachindex(idxs_scan)]
+        for i in eachindex(scan_dist_vec)
+            # Displacement vector from reference point to scan point
+            ref_idx = idx_vec[i]
+            disp = best_result[i, :] .- surf_pca[ref_idx, :]
+            n_vec = surf_normals_pca[ref_idx, :]
+            # Signed distance: positive = outside (bloating), negative = inside (shrinking)
+            scan_signed_dists[i] = dot(disp, n_vec)
+        end
+        signed_mean = mean(scan_signed_dists)
+    end
 
     return Dict(
         "status" => "complete",
-        "bestDistance" => round(best_dist, digits=4),
+        "chamferDist" => round(best_dist, digits=4),
         "bestReflection" => best_reflection,
         "meanAtoB" => round(best_ab, digits=4),
         "meanBtoA" => round(best_ba, digits=4),
@@ -207,10 +248,17 @@ function register(scan::Matrix{Float64}, surface::Matrix{Float64})
         "rmse" => round(rmse_val, digits=4),
         "tem" => round(tem_val, digits=4),
         "maxDist" => round(max_val, digits=4),
+        "maxAtoB" => round(max_ab, digits=4),
+        "maxBtoA" => round(max_ba, digits=4),
+        "p95AtoB" => round(p95_ab, digits=4),
+        "p95BtoA" => round(p95_ba, digits=4),
+        "p95Bidir" => round(p95_bidir, digits=4),
+        "signedMean" => round(signed_mean, digits=6),
+        "yieldPct" => round(yield_pct, digits=1),
         "scanCoords" => vec(best_result'),
         "surfCoords" => vec(surf_pca'),
-        "scanDistances" => [round(scan_dists[i][1], digits=4) for i in eachindex(scan_dists)],
-        "surfDistances" => [round(surf_dists[i][1], digits=4) for i in eachindex(surf_dists)]
+        "scanDistances" => [round(scan_dist_vec[i], digits=4) for i in eachindex(scan_dist_vec)],
+        "surfDistances" => [round(surf_dist_vec[i], digits=4) for i in eachindex(surf_dist_vec)]
     )
 end
 

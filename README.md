@@ -1,4 +1,4 @@
-# Quality Assurance 3D (QA3D) v1.1.2
+# Quality Assurance 3D (QA3D) v1.2.0
 
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
 ![Julia](https://img.shields.io/badge/Julia-1.11-9558B2?logo=julia&logoColor=white)
@@ -11,9 +11,11 @@ A desktop application for comparing scanned models against generated reference s
 
 **Key Features:**
 - **Multi-Format Model Loading** — reads 3D scan data from `.xyzrgb`, `.obj`, `.ply` (ASCII + binary), and `.stl` (ASCII + binary) files
-- **Surface Generation** — creates rectangular prism surfaces from X, Y, Z dimensions
+- **Surface Generation** — creates rectangular prism surfaces from X, Y, Z dimensions with per-vertex outward normals
 - **Auto-Density Calculation** — automatically matches surface point density to the scan
 - **PCA + ICP Registration** — point-to-point ICP with 8-axis reflection search (multithreaded, up to 8 threads)
+- **Comprehensive QA Metrics** — Chamfer Distance, Signed Mean Bias, RMSE, SD, TEM, 95th Percentile Error, In-Tolerance Yield, and Max Distance
+- **Report Export** — save timestamped QA reports as plain text files
 - **3D Visualization** — interactive Three.js viewer with distance heatmap, dual-color modes, point cloud / mesh rendering toggle, and per-cloud visibility controls
 
 ## Architecture
@@ -31,13 +33,13 @@ A desktop application for comparing scanned models against generated reference s
                │ stdin/stdout JSON
 ┌──────────────┴──────────────────────────┐
 │         Julia Sidecar (QA3D.jl)         │
-│  XYZRGB parsing, surface gen, PCA+ICP   │
+│  Mesh parsing, surface gen, PCA+ICP, QA  │
 └─────────────────────────────────────────┘
 ```
 
 - **Frontend**: Vanilla JS + Three.js in an Electron window
 - **Electron (Node.js)**: Handles window management, file system access, and IPC
-- **Julia sidecar**: Runs as a subprocess, communicating via JSON over stdin/stdout. Handles XYZRGB parsing, surface generation, PCA alignment, and ICP registration
+- **Julia sidecar**: Runs as a subprocess, communicating via JSON over stdin/stdout. Handles mesh parsing, surface generation (with per-vertex normals), PCA alignment, ICP registration, and QA metric computation
 
 ## System Requirements
 
@@ -89,8 +91,8 @@ npm run build
 
 | Platform | Output |
 |----------|--------|
-| **Linux** | `dist/QA3D-1.1.2.AppImage` |
-| **Windows** | `dist/QA3D Setup 1.1.2.exe` |
+| **Linux** | `dist/QA3D-1.2.0.AppImage` |
+| **Windows** | `dist/QA3D Setup 1.2.0.exe` |
 
 ---
 
@@ -103,8 +105,10 @@ npm run build
    d = sqrt( 2(XY + XZ + YZ) / n_scan_points )
    ```
    This generates a reference surface with similar point density to the scan. You can override D manually.
-4. Click **Compare** to run PCA + ICP registration
-5. Results appear in the left panel and the **3D viewer** shows both clouds overlapping
+4. **Tol** (tolerance) defaults to **0.05 mm** — set this to your scanner's published accuracy for the In-Tolerance Yield metric
+5. Click **Compare** to run PCA + ICP registration
+6. Results appear in the left panel and the **3D viewer** shows both clouds overlapping
+7. Click **📄 Save Report** to export a timestamped QA report as a `.txt` file
 
 ### Example Data
 
@@ -137,19 +141,36 @@ Use mouse to **orbit** (left-drag), **zoom** (scroll), and **pan** (right-drag).
 1. **PCA alignment** — centers both point clouds and rotates the scan via principal component analysis
 2. **8-reflection search** — PCA can flip axes, so all 8 sign permutations (±X, ±Y, ±Z) are tested in parallel
 3. **Point-to-point ICP** — for each reflection, SVD-based rigid body alignment iteratively refines the fit
-4. **Bidirectional Hausdorff** — `(mean_A→B + mean_B→A) / 2` measures the final fit quality
-5. The reflection with the lowest Hausdorff distance is selected as the best result
+4. **Bidirectional Mean Distance** — `(mean_A→B + mean_B→A) / 2` (Chamfer Distance) measures the final fit quality
+5. The reflection with the lowest Chamfer Distance is selected as the best result
 
 ### Interpreting Results
 
-- **Hausdorff (mean)** — average surface deviation; lower = better scanner accuracy
-- **A → B** — mean distance from scan to surface (scanner noise)
-- **B → A** — mean distance from surface to scan (coverage gaps)
-- **SD** — standard deviation of per-point distances; lower = more uniform accuracy
+#### Distance Metrics
+- **Chamfer Distance** — bidirectional mean surface deviation; lower = better scanner accuracy
+- **Scan → Reference** — mean distance from scan to reference surface (scanner noise/distortion)
+- **Reference → Scan** — mean distance from reference to scan (coverage gaps / blind spots)
+- **Signed Mean** — mean signed distance projected along reference surface normals; positive = scanner is bloating geometry, negative = scanner is shrinking geometry
+- **SD** — standard deviation of per-point distances; lower = more uniform accuracy (precision)
 - **RMSE** — root mean squared error; penalizes large deviations more than mean
-- **TEM** — Technical Error of Measurement (Dahlberg formula); standard QA metric for repeated measurements
-- **Max distance** — largest single-point deviation; identifies worst-case scanner error
+- **TEM** — Technical Error of Measurement (Dahlberg formula)
+- **Max Distance (S→R)** — largest single scan-point deviation; worst-case scanner noise
+- **Max Distance (R→S)** — largest reference-point gap; worst-case coverage blind spot
+
+#### Percentile Metrics
+- **95th Percentile (S→R)** — upper boundary of scanner noise; 95% of scan points fall within this distance
+- **95th Percentile (R→S)** — upper boundary of coverage gaps; 95% of reference points are represented
+- **95th Percentile (Bidirectional)** — robust global maximum that ignores single-point outliers (dust, reflections)
+
+#### Tolerance Analysis
+- **In-Tolerance** — percentage of scan points (Scan → Reference) that fall within the user-specified tolerance band; a direct pass/fail QA metric
+
+#### Registration
 - **Best reflection** — which axis permutation produced the best alignment
+
+### Report Export
+
+Click **📄 Save Report** after a comparison to export a styled PDF report containing all input parameters, metrics, and results. Reports include color-coded indicators for signed bias direction and tolerance pass/fail status.
 
 ---
 
@@ -160,8 +181,8 @@ QA3D/
 ├── src/
 │   ├── QA3D.jl               # Module entry + sidecar command dispatcher
 │   ├── mesh_reader.jl        # Multi-format parser (xyzrgb, obj, ply, stl)
-│   ├── surface_generator.jl  # Box surface point generator
-│   └── registration.jl       # PCA + point-to-point ICP
+│   ├── surface_generator.jl  # Box surface + normal generator
+│   └── registration.jl       # PCA + ICP + QA metrics
 ├── public/
 │   ├── index.html             # Single-page UI
 │   ├── css/styles.css         # Dark theme
@@ -188,7 +209,7 @@ QA3D/
 
 ## Citation
 
-Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 1.1.2. Defense POW/MIA Accounting Agency, Offutt AFB, NE.
+Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 1.2.0. Defense POW/MIA Accounting Agency, Offutt AFB, NE.
 
 ## Known Issues
 

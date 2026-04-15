@@ -10,6 +10,7 @@
     let scanPointCount = 0;
     let densityManuallySet = false;
     let fileHasFaces = false;
+    let lastResultData = null; // store for report generation
 
     // ── DOM Elements ─────────────────────────────
     const modelPathInput = document.getElementById('model-path');
@@ -18,8 +19,10 @@
     const dimY = document.getElementById('dim-y');
     const dimZ = document.getElementById('dim-z');
     const dimD = document.getElementById('dim-d');
+    const dimTol = document.getElementById('dim-tol');
     const compareBtn = document.getElementById('compare-btn');
     const clearBtn = document.getElementById('clear-btn');
+    const reportBtn = document.getElementById('report-btn');
     const resultsSection = document.getElementById('results-section');
     const resultsContent = document.getElementById('results-content');
     const toggleModeBtn = document.getElementById('toggle-mode-btn');
@@ -97,13 +100,16 @@
         compareBtn.disabled = true;
         compareBtn.textContent = '⏳ Comparing...';
 
+        const toleranceVal = parseFloat(dimTol.value) || 0.05;
+
         try {
             const data = await invoke('run_compare', {
                 filepath: selectedFilePath,
                 x: parseFloat(dimX.value),
                 y: parseFloat(dimY.value),
                 z: parseFloat(dimZ.value),
-                d: parseFloat(dimD.value)
+                d: parseFloat(dimD.value),
+                tolerance: toleranceVal
             });
 
             if (data.error) {
@@ -111,7 +117,23 @@
                 return;
             }
 
-            // Display metrics immediately
+            // Store for report generation
+            lastResultData = data;
+            lastResultData._tolerance = toleranceVal;
+            lastResultData._filepath = selectedFilePath;
+            lastResultData._dims = {
+                x: parseFloat(dimX.value),
+                y: parseFloat(dimY.value),
+                z: parseFloat(dimZ.value),
+                d: parseFloat(dimD.value)
+            };
+
+            // Format signed mean with explicit sign
+            const signedStr = data.signedMean >= 0
+                ? `+${data.signedMean.toFixed(6)}`
+                : data.signedMean.toFixed(6);
+
+            // Display metrics
             resultsSection.classList.remove('hidden');
             resultsContent.innerHTML = `
                 <div class="result-row">
@@ -123,16 +145,20 @@
                     <span class="result-value">${data.surfacePoints.toLocaleString()}</span>
                 </div>
                 <div class="result-row">
-                    <span class="result-label">Hausdorff (mean)</span>
-                    <span class="result-value">${data.bestDistance}</span>
+                    <span class="result-label">Chamfer Distance</span>
+                    <span class="result-value">${data.chamferDist}</span>
                 </div>
                 <div class="result-row">
-                    <span class="result-label">A → B</span>
+                    <span class="result-label">Scan → Reference</span>
                     <span class="result-value">${data.meanAtoB}</span>
                 </div>
                 <div class="result-row">
-                    <span class="result-label">B → A</span>
+                    <span class="result-label">Reference → Scan</span>
                     <span class="result-value">${data.meanBtoA}</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Signed Mean</span>
+                    <span class="result-value">${signedStr}</span>
                 </div>
                 <div class="result-row">
                     <span class="result-label">SD</span>
@@ -147,8 +173,28 @@
                     <span class="result-value">${data.tem}</span>
                 </div>
                 <div class="result-row">
-                    <span class="result-label">Max distance</span>
-                    <span class="result-value">${data.maxDist}</span>
+                    <span class="result-label">Max Distance (S→R)</span>
+                    <span class="result-value">${data.maxAtoB}</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Max Distance (R→S)</span>
+                    <span class="result-value">${data.maxBtoA}</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">95th Percentile (S→R)</span>
+                    <span class="result-value">${data.p95AtoB}</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">95th Percentile (R→S)</span>
+                    <span class="result-value">${data.p95BtoA}</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">95th Percentile (Bidirectional)</span>
+                    <span class="result-value">${data.p95Bidir}</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">In-Tolerance (≤ ${toleranceVal} mm)</span>
+                    <span class="result-value">${data.yieldPct}%</span>
                 </div>
                 <div class="result-row">
                     <span class="result-label">Best reflection</span>
@@ -157,6 +203,7 @@
             `;
 
             clearBtn.classList.remove('hidden');
+            reportBtn.classList.remove('hidden');
 
             // Load point cloud data into viewer
             if (typeof Viewer !== 'undefined' && data.scanCoords) {
@@ -191,11 +238,14 @@
         dimY.value = '8.91';
         dimZ.value = '34.90';
         dimD.value = '0.1';
+        dimTol.value = '0.05';
         scanPointCount = 0;
         densityManuallySet = false;
         fileHasFaces = false;
+        lastResultData = null;
         resultsSection.classList.add('hidden');
         clearBtn.classList.add('hidden');
+        reportBtn.classList.add('hidden');
         toggleModeBtn.classList.add('hidden');
         colormapSelect.classList.add('hidden');
         colormapSelect.value = 'green-red';
@@ -212,6 +262,60 @@
         showSurfaceCheckbox.checked = true;
         if (typeof Viewer !== 'undefined') Viewer.clear();
         updateCompareState();
+    });
+
+    // ── Save Report ─────────────────────────────
+    reportBtn.addEventListener('click', async () => {
+        if (!lastResultData) return;
+
+        const d = lastResultData;
+        const now = new Date();
+        const ts = now.getFullYear()
+            + '-' + String(now.getMonth() + 1).padStart(2, '0')
+            + '-' + String(now.getDate()).padStart(2, '0')
+            + ' ' + String(now.getHours()).padStart(2, '0')
+            + ':' + String(now.getMinutes()).padStart(2, '0')
+            + ':' + String(now.getSeconds()).padStart(2, '0');
+
+        const reportData = {
+            timestamp: ts,
+            fileName: d._filepath.split(/[/\\]/).pop(),
+            filepath: d._filepath,
+            dimX: d._dims.x.toFixed(2),
+            dimY: d._dims.y.toFixed(2),
+            dimZ: d._dims.z.toFixed(2),
+            density: d._dims.d,
+            tolerance: d._tolerance,
+            scanPoints: d.scanPoints,
+            surfacePoints: d.surfacePoints,
+            chamferDist: d.chamferDist,
+            meanAtoB: d.meanAtoB,
+            meanBtoA: d.meanBtoA,
+            signedMean: d.signedMean,
+            sd: d.sd,
+            rmse: d.rmse,
+            tem: d.tem,
+            maxDist: d.maxDist,
+            maxAtoB: d.maxAtoB,
+            maxBtoA: d.maxBtoA,
+            p95AtoB: d.p95AtoB,
+            p95BtoA: d.p95BtoA,
+            p95Bidir: d.p95Bidir,
+            yieldPct: d.yieldPct,
+            bestReflection: d.bestReflection
+        };
+
+        const defaultName = `QA3D_Report_${ts.replace(/[: ]/g, '-').replace(/--/g, '_')}.pdf`;
+
+        try {
+            const result = await invoke('save_report', { reportData, defaultName });
+            if (result.saved) {
+                reportBtn.textContent = '✅ Saved!';
+                setTimeout(() => { reportBtn.textContent = '📄 Save Report'; }, 2000);
+            }
+        } catch (e) {
+            console.error('Report save error:', e);
+        }
     });
 
     // ── Toggle viewer color mode ────────────────
