@@ -93,6 +93,15 @@ const Viewer = (function () {
         return colormaps[currentColormap].map(t);
     }
 
+    // Convert hex (#rrggbb) to {r, g, b} in [0,1]
+    function hexToRGB(hex) {
+        const n = parseInt(hex.replace('#', ''), 16);
+        return { r: ((n >> 16) & 0xff) / 255, g: ((n >> 8) & 0xff) / 255, b: (n & 0xff) / 255 };
+    }
+
+    let dualScanHex = '#d9a621';
+    let dualSurfHex = '#4d80e6';
+
     // ── Initialize (deferred) ───────────────────────
     function init(id) {
         containerId = id;
@@ -262,20 +271,8 @@ const Viewer = (function () {
         storedData.surfHeatColors = new Float32Array(nSurf * 3);
         recomputeHeatColors();
 
-        // Dual-color: scan = gold, surface = blue
-        storedData.scanDualColors = new Float32Array(nScan * 3);
-        for (let i = 0; i < nScan; i++) {
-            storedData.scanDualColors[i * 3] = 0.85;
-            storedData.scanDualColors[i * 3 + 1] = 0.65;
-            storedData.scanDualColors[i * 3 + 2] = 0.13;
-        }
-
-        storedData.surfDualColors = new Float32Array(nSurf * 3);
-        for (let i = 0; i < nSurf; i++) {
-            storedData.surfDualColors[i * 3] = 0.3;
-            storedData.surfDualColors[i * 3 + 1] = 0.5;
-            storedData.surfDualColors[i * 3 + 2] = 0.9;
-        }
+        // Dual-color: use current picker colors
+        rebuildDualColors(nScan, nSurf);
 
         // Reset visibility
         scanVisible = true;
@@ -427,6 +424,32 @@ const Viewer = (function () {
         buildLegend(storedData.minDist, storedData.maxDist);
     }
 
+    // ── Rebuild dual-color arrays from current hex values ──
+    function rebuildDualColors(nScan, nSurf) {
+        const sc = hexToRGB(dualScanHex);
+        const uc = hexToRGB(dualSurfHex);
+        storedData.scanDualColors = new Float32Array(nScan * 3);
+        for (let i = 0; i < nScan; i++) {
+            storedData.scanDualColors[i * 3] = sc.r;
+            storedData.scanDualColors[i * 3 + 1] = sc.g;
+            storedData.scanDualColors[i * 3 + 2] = sc.b;
+        }
+        storedData.surfDualColors = new Float32Array(nSurf * 3);
+        for (let i = 0; i < nSurf; i++) {
+            storedData.surfDualColors[i * 3] = uc.r;
+            storedData.surfDualColors[i * 3 + 1] = uc.g;
+            storedData.surfDualColors[i * 3 + 2] = uc.b;
+        }
+    }
+
+    function setDualColors(scanHex, surfHex) {
+        dualScanHex = scanHex;
+        dualSurfHex = surfHex;
+        if (!storedData) return;
+        rebuildDualColors(storedData.nScan, storedData.nSurf);
+        if (currentMode === 'dual') applyMode('dual');
+    }
+
     function clear() {
         removeAllObjects();
         if (legendEl) { legendEl.remove(); legendEl = null; }
@@ -446,6 +469,7 @@ const Viewer = (function () {
         init, loadResults, toggleMode, getMode,
         setColormap, setPointSize, clear,
         setRenderMode, getRenderMode,
-        setScanVisible, setSurfVisible
+        setScanVisible, setSurfVisible,
+        setDualColors
     };
 })();

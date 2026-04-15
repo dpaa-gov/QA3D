@@ -419,6 +419,46 @@ body {
     cursor: pointer;
 }
 
+/* ── Dual Color Pickers ──────────────────────── */
+.color-swatch {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--border-light);
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.color-swatch::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.color-swatch::-webkit-color-swatch {
+    border: none;
+    border-radius: 50%;
+}
+
+.color-swatch:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.2);
+}
+
+.color-swatch:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.color-picker-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 /* ── Color Legend ─────────────────────────────── */
 .color-legend {
     position: absolute;

@@ -32,6 +32,9 @@
     const showSurfaceCheckbox = document.getElementById('show-surface');
     const renderModeControl = document.getElementById('render-mode-control');
     const renderModeSelect = document.getElementById('render-mode-select');
+    const dualColorPickers = document.getElementById('dual-color-pickers');
+    const scanColorPicker = document.getElementById('scan-color-picker');
+    const surfColorPicker = document.getElementById('surf-color-picker');
 
     // Initialize 3D viewer
     if (typeof Viewer !== 'undefined') Viewer.init('viewer-container');
@@ -202,6 +205,9 @@
         visibilityControls.classList.add('hidden');
         renderModeControl.classList.add('hidden');
         renderModeSelect.value = 'pointcloud';
+        dualColorPickers.classList.add('hidden');
+        scanColorPicker.value = '#d9a621';
+        surfColorPicker.value = '#4d80e6';
         showScanCheckbox.checked = true;
         showSurfaceCheckbox.checked = true;
         if (typeof Viewer !== 'undefined') Viewer.clear();
@@ -214,6 +220,8 @@
         toggleModeBtn.textContent = mode === 'heatmap' ? '🎨 Dual Color' : '🌡️ Heatmap';
         // Show colormap selector only in heatmap mode
         colormapSelect.classList.toggle('hidden', mode !== 'heatmap');
+        // Show dual color pickers only in dual mode
+        dualColorPickers.classList.toggle('hidden', mode !== 'dual');
     });
 
     // ── Colormap selector ───────────────────────
@@ -226,6 +234,14 @@
         const size = parseFloat(e.target.value);
         pointSizeValue.textContent = size.toFixed(1);
         if (typeof Viewer !== 'undefined') Viewer.setPointSize(size);
+    });
+
+    // ── Dual color pickers ──────────────────────
+    scanColorPicker.addEventListener('input', (e) => {
+        if (typeof Viewer !== 'undefined') Viewer.setDualColors(e.target.value, surfColorPicker.value);
+    });
+    surfColorPicker.addEventListener('input', (e) => {
+        if (typeof Viewer !== 'undefined') Viewer.setDualColors(scanColorPicker.value, e.target.value);
     });
 
     // ── Visibility checkboxes ───────────────────
