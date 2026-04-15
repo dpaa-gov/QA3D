@@ -4,7 +4,7 @@ authors:
   - family-names: "Lynch"
     given-names: "J.J."
 title: "QA3D: Quality Assurance 3D"
-version: 1.1.2
+version: 1.2.0
 date-released: 2026
 url: "https://github.com/dpaa-gov/QA3D"
 institution:
@@ -16,7 +16,7 @@ preferred-citation:
     - family-names: "Lynch"
       given-names: "J.J."
   title: "QA3D. Quality Assurance 3D"
-  version: 1.1.2
+  version: 1.2.0
   year: 2026
   institution:
     name: "Defense POW/MIA Accounting Agency, Offutt AFB, NE"
