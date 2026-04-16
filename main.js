@@ -130,8 +130,18 @@ ipcMain.handle('save_report', async (_event, { reportData, defaultName }) => {
                 <td class="${errClass}">${errStr}</td>
                 <td>${r.parallelism.toFixed(3)}°</td>
                 <td>${r.flatnessNeg.toFixed(4)} / ${r.flatnessPos.toFixed(4)}</td>
+                <td>${r.maxDevNeg.toFixed(4)} / ${r.maxDevPos.toFixed(4)}</td>
             </tr>`;
         }).join('');
+
+    // Build perpendicularity rows
+    const perpRows = (d.perpendicularity || [])
+        .filter(r => r.valid)
+        .map(r => `<tr>
+            <td class="dim-axis">${r.edges}</td>
+            <td>${r.meanDev.toFixed(4)}°</td>
+            <td>${r.maxDev.toFixed(4)}°</td>
+        </tr>`).join('');
 
     const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
@@ -139,8 +149,8 @@ ipcMain.handle('save_report', async (_event, { reportData, defaultName }) => {
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
         font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-        background: #fff; color: #1a1d23; padding: 30px 50px;
-        font-size: 12px; line-height: 1.45;
+        background: #fff; color: #1a1d23; padding: 15px 40px;
+        font-size: 11px; line-height: 1.35;
     }
     .header {
         display: flex; justify-content: space-between; align-items: flex-end;
@@ -257,9 +267,32 @@ ${dimRows ? `
     <table class="dim-table">
         <thead><tr>
             <th>Axis</th><th>Nominal</th><th>Measured</th>
-            <th>Error</th><th>Parallelism</th><th>Flatness −/+</th>
+            <th>Error</th><th>Parallelism</th><th>Flatness −/+</th><th>Max Dev −/+</th>
         </tr></thead>
         <tbody>${dimRows}</tbody>
+    </table>
+</div>
+` : ''}
+
+${perpRows ? `
+<div class="section">
+    <h2>Perpendicularity</h2>
+    <table class="dim-table">
+        <thead><tr>
+            <th>Edges</th><th>Mean Dev</th><th>Max Dev</th>
+        </tr></thead>
+        <tbody>${perpRows}</tbody>
+    </table>
+</div>
+` : ''}
+
+${d.volumeAnalysis ? `
+<div class="section">
+    <h2>Volume Comparison</h2>
+    <table>
+        <tr><td>Nominal Volume</td><td>${d.volumeAnalysis.nominal.toFixed(2)} mm³</td></tr>
+        <tr><td>Measured Volume</td><td>${d.volumeAnalysis.measured.toFixed(2)} mm³</td></tr>
+        <tr><td>Volume Error</td><td class="${d.volumeAnalysis.errorPct >= 0 ? 'signed-pos' : 'signed-neg'}">${d.volumeAnalysis.errorPct >= 0 ? '+' : ''}${d.volumeAnalysis.errorPct.toFixed(3)}%</td></tr>
     </table>
 </div>
 ` : ''}

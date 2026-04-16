@@ -214,6 +214,7 @@
                             <th>Error</th>
                             <th>∠ Para</th>
                             <th>Flat −/+</th>
+                            <th>Max −/+</th>
                         </tr></thead>
                         <tbody>
                         ${data.dimensionalAnalysis.filter(r => r.valid).map(r => {
@@ -226,10 +227,43 @@
                                 <td class="${errClass}">${errStr}</td>
                                 <td>${r.parallelism.toFixed(3)}°</td>
                                 <td>− ${r.flatnessNeg.toFixed(4)}<br>+ ${r.flatnessPos.toFixed(4)}</td>
+                                <td>− ${r.maxDevNeg.toFixed(4)}<br>+ ${r.maxDevPos.toFixed(4)}</td>
                             </tr>`;
                         }).join('')}
                         </tbody>
                     </table>
+                    ${data.perpendicularity && data.perpendicularity.length > 0 ? `
+                    <h4 style="margin-top:12px; padding-top:10px; border-top:1px solid var(--accent);">Perpendicularity</h4>
+                    <table class="dim-table">
+                        <thead><tr>
+                            <th>Edges</th>
+                            <th>Mean Dev</th>
+                            <th>Max Dev</th>
+                        </tr></thead>
+                        <tbody>
+                        ${data.perpendicularity.filter(r => r.valid).map(r => `<tr>
+                            <td>${r.edges}</td>
+                            <td>${r.meanDev.toFixed(4)}°</td>
+                            <td>${r.maxDev.toFixed(4)}°</td>
+                        </tr>`).join('')}
+                        </tbody>
+                    </table>
+                    ` : ''}
+                    ${data.volumeAnalysis ? `
+                    <h4 style="margin-top:12px; padding-top:10px; border-top:1px solid var(--accent);">Volume</h4>
+                    <div class="result-row">
+                        <span class="result-label">Nominal</span>
+                        <span class="result-value">${data.volumeAnalysis.nominal.toFixed(2)} mm³</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Measured</span>
+                        <span class="result-value">${data.volumeAnalysis.measured.toFixed(2)} mm³</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Error</span>
+                        <span class="result-value ${data.volumeAnalysis.errorPct >= 0 ? 'dim-error-pos' : 'dim-error-neg'}">${data.volumeAnalysis.errorPct >= 0 ? '+' : ''}${data.volumeAnalysis.errorPct.toFixed(3)}%</span>
+                    </div>
+                    ` : ''}
                 </div>
                 ` : ''}
             `;
@@ -336,6 +370,8 @@
             yieldPct: d.yieldPct,
             bestReflection: d.bestReflection,
             dimensionalAnalysis: d.dimensionalAnalysis || [],
+            perpendicularity: d.perpendicularity || [],
+            volumeAnalysis: d.volumeAnalysis || null,
             trimPct: parseFloat(dimTrim.value) || 10
         };
 

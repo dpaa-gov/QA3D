@@ -99,8 +99,8 @@ body {
 }
 
 .left-panel {
-    width: 380px;
-    min-width: 380px;
+    width: 440px;
+    min-width: 440px;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -577,6 +577,7 @@ body {
     padding: 4px;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 11px;
+    white-space: nowrap;
 }
 
 .dim-table td:first-child {
