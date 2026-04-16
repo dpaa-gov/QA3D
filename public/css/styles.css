@@ -364,7 +364,9 @@ body {
 /* ── Viewer Toolbar ──────────────────────────── */
 .viewer-toolbar {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
     padding-bottom: 8px;
 }

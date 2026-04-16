@@ -286,6 +286,12 @@
                 showSurfaceCheckbox.checked = true;
                 renderModeSelect.value = 'pointcloud';
 
+                // Reset color mode to heatmap defaults
+                toggleModeBtn.textContent = '🎨 Dual Color';
+                colormapSelect.value = 'green-red';
+                colormapSelect.classList.remove('hidden');
+                dualColorPickers.classList.add('hidden');
+
                 Viewer.loadResults(data);
             }
         } catch (e) {
@@ -430,9 +436,9 @@
     // ── Render mode selector ────────────────────
     renderModeSelect.addEventListener('change', (e) => {
         if (typeof Viewer !== 'undefined') Viewer.setRenderMode(e.target.value);
-        // Show/hide point size control: keep visible in mesh mode if scan has no faces
-        // (scan still renders as points even when surface renders as mesh)
-        pointSizeControl.classList.toggle('hidden', e.target.value === 'mesh' && fileHasFaces);
+        // Hide point size control visually but keep space reserved to prevent toolbar shift
+        const shouldHide = e.target.value === 'mesh' && fileHasFaces;
+        pointSizeControl.style.visibility = shouldHide ? 'hidden' : 'visible';
     });
 
 })();
