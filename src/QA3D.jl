@@ -9,10 +9,12 @@ using Statistics
 include("mesh_reader.jl")
 include("surface_generator.jl")
 include("registration.jl")
+include("dimensional_analysis.jl")
 
 using .MeshReader
 using .SurfaceGenerator
 using .Registration
+using .DimensionalAnalysis
 
 """
     handle_command(cmd::Dict) -> Dict
@@ -39,6 +41,7 @@ function handle_command(cmd::Dict)
             dim_z = Float64(get(cmd, "z", 0.0))
             density = Float64(get(cmd, "d", 1.0))
             tolerance = Float64(get(cmd, "tolerance", 0.05))
+            trim_pct = Float64(get(cmd, "trim_pct", 10.0))
 
             ext = lowercase(splitext(filepath)[2])
             if !isfile(filepath) || ext ∉ SUPPORTED_EXTENSIONS
@@ -54,9 +57,17 @@ function handle_command(cmd::Dict)
                               ref_normals=surf_mesh.normals,
                               tolerance=tolerance)
 
+            # ── Dimensional Analysis (face-pair metrics) ──────
+            n_scan = size(mesh.coords, 1)
+            n_surf = size(surf_mesh.coords, 1)
+            scan_reg = Matrix(reshape(Float64.(result["scanCoords"]), 3, n_scan)')
+            surf_reg = Matrix(reshape(Float64.(result["surfCoords"]), 3, n_surf)')
+            dim_result = analyze_dimensions(scan_reg, surf_reg, dim_x, dim_y, dim_z; trim_pct=trim_pct)
+            merge!(result, dim_result)
+
             result["success"] = true
-            result["scanPoints"] = size(mesh.coords, 1)
-            result["surfacePoints"] = size(surf_mesh.coords, 1)
+            result["scanPoints"] = n_scan
+            result["surfacePoints"] = n_surf
 
             # Include face indices if available (convert to 0-based for JS)
             if mesh.faces !== nothing

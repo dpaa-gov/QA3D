@@ -20,6 +20,7 @@
     const dimZ = document.getElementById('dim-z');
     const dimD = document.getElementById('dim-d');
     const dimTol = document.getElementById('dim-tol');
+    const dimTrim = document.getElementById('dim-trim');
     const compareBtn = document.getElementById('compare-btn');
     const clearBtn = document.getElementById('clear-btn');
     const reportBtn = document.getElementById('report-btn');
@@ -101,6 +102,7 @@
         compareBtn.textContent = '⏳ Comparing...';
 
         const toleranceVal = parseFloat(dimTol.value) || 0.05;
+        const trimPct = parseFloat(dimTrim.value) || 10;
 
         try {
             const data = await invoke('run_compare', {
@@ -109,7 +111,8 @@
                 y: parseFloat(dimY.value),
                 z: parseFloat(dimZ.value),
                 d: parseFloat(dimD.value),
-                tolerance: toleranceVal
+                tolerance: toleranceVal,
+                trim_pct: trimPct
             });
 
             if (data.error) {
@@ -200,6 +203,35 @@
                     <span class="result-label">Best reflection</span>
                     <span class="result-value">#${data.bestReflection}</span>
                 </div>
+                ${data.dimensionalAnalysis ? `
+                <div class="dim-analysis-section">
+                    <h4>Dimensional Analysis</h4>
+                    <table class="dim-table">
+                        <thead><tr>
+                            <th>Axis</th>
+                            <th>Nominal</th>
+                            <th>Measured</th>
+                            <th>Error</th>
+                            <th>∠ Para</th>
+                            <th>Flat −/+</th>
+                        </tr></thead>
+                        <tbody>
+                        ${data.dimensionalAnalysis.filter(r => r.valid).map(r => {
+                            const errStr = r.error >= 0 ? `+${r.error.toFixed(4)}` : r.error.toFixed(4);
+                            const errClass = r.error >= 0 ? 'dim-error-pos' : 'dim-error-neg';
+                            return `<tr>
+                                <td>${r.axis}</td>
+                                <td>${r.nominal.toFixed(2)}</td>
+                                <td>${r.measured.toFixed(4)}</td>
+                                <td class="${errClass}">${errStr}</td>
+                                <td>${r.parallelism.toFixed(3)}°</td>
+                                <td>− ${r.flatnessNeg.toFixed(4)}<br>+ ${r.flatnessPos.toFixed(4)}</td>
+                            </tr>`;
+                        }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ` : ''}
             `;
 
             clearBtn.classList.remove('hidden');
@@ -302,7 +334,9 @@
             p95BtoA: d.p95BtoA,
             p95Bidir: d.p95Bidir,
             yieldPct: d.yieldPct,
-            bestReflection: d.bestReflection
+            bestReflection: d.bestReflection,
+            dimensionalAnalysis: d.dimensionalAnalysis || [],
+            trimPct: parseFloat(dimTrim.value) || 10
         };
 
         const defaultName = `QA3D_Report_${ts.replace(/[: ]/g, '-').replace(/--/g, '_')}.pdf`;
@@ -360,8 +394,9 @@
     // ── Render mode selector ────────────────────
     renderModeSelect.addEventListener('change', (e) => {
         if (typeof Viewer !== 'undefined') Viewer.setRenderMode(e.target.value);
-        // Show/hide point size control based on render mode
-        pointSizeControl.classList.toggle('hidden', e.target.value === 'mesh');
+        // Show/hide point size control: keep visible in mesh mode if scan has no faces
+        // (scan still renders as points even when surface renders as mesh)
+        pointSizeControl.classList.toggle('hidden', e.target.value === 'mesh' && fileHasFaces);
     });
 
 })();

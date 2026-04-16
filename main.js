@@ -100,8 +100,8 @@ ipcMain.handle('get_fileinfo', async (_event, { filepath }) => {
     return sendToSidecar({ command: 'fileinfo', filepath });
 });
 
-ipcMain.handle('run_compare', async (_event, { filepath, x, y, z, d, tolerance }) => {
-    return sendToSidecar({ command: 'compare', filepath, x, y, z, d, tolerance });
+ipcMain.handle('run_compare', async (_event, { filepath, x, y, z, d, tolerance, trim_pct }) => {
+    return sendToSidecar({ command: 'compare', filepath, x, y, z, d, tolerance, trim_pct });
 });
 
 ipcMain.handle('save_report', async (_event, { reportData, defaultName }) => {
@@ -116,6 +116,22 @@ ipcMain.handle('save_report', async (_event, { reportData, defaultName }) => {
     const signedStr = d.signedMean >= 0
         ? `+${d.signedMean.toFixed(6)}`
         : d.signedMean.toFixed(6);
+
+    // Build dimensional analysis rows for the PDF
+    const dimRows = (d.dimensionalAnalysis || [])
+        .filter(r => r.valid)
+        .map(r => {
+            const errStr = r.error >= 0 ? `+${r.error.toFixed(4)}` : r.error.toFixed(4);
+            const errClass = r.error >= 0 ? 'signed-pos' : 'signed-neg';
+            return `<tr>
+                <td class="dim-axis">${r.axis}</td>
+                <td>${r.nominal.toFixed(2)}</td>
+                <td>${r.measured.toFixed(4)}</td>
+                <td class="${errClass}">${errStr}</td>
+                <td>${r.parallelism.toFixed(3)}°</td>
+                <td>${r.flatnessNeg.toFixed(4)} / ${r.flatnessPos.toFixed(4)}</td>
+            </tr>`;
+        }).join('');
 
     const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
@@ -149,6 +165,21 @@ ipcMain.handle('save_report', async (_event, { reportData, defaultName }) => {
     .fail { color: #dc2626; font-weight: 600; }
     .signed-pos { color: #ea580c; }
     .signed-neg { color: #2563eb; }
+    .dim-table { border-top: 1px solid #e5e7eb; margin-top: 4px; }
+    .dim-table th {
+        font-size: 9px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.5px; color: #6b7280; padding: 4px 2px;
+        text-align: right; border-bottom: 1px solid #e5e7eb;
+    }
+    .dim-table th:first-child { text-align: left; }
+    .dim-table td {
+        padding: 3px 2px; text-align: right;
+        font-family: 'Consolas', 'Monaco', monospace; font-size: 11px;
+        color: #1a1d23; width: auto;
+    }
+    .dim-table td:first-child { text-align: left; color: #6b7280; width: auto; }
+    .dim-table td.dim-axis { font-weight: 600; color: #d4a843; }
+    .dim-table tr + tr td { border-top: 1px solid #f3f4f6; }
     .footer {
         margin-top: 16px; padding-top: 8px; border-top: 1px solid #e5e7eb;
         font-size: 10px; color: #9ca3af; text-align: center;
@@ -167,6 +198,7 @@ ipcMain.handle('save_report', async (_event, { reportData, defaultName }) => {
         <tr><td>Dimensions</td><td>${d.dimX} × ${d.dimY} × ${d.dimZ} mm</td></tr>
         <tr><td>Density</td><td>${d.density}</td></tr>
         <tr><td>Tolerance</td><td>${d.tolerance} mm</td></tr>
+        <tr><td>Edge Trim</td><td>${d.trimPct}%</td></tr>
     </table>
 </div>
 
@@ -218,6 +250,19 @@ ipcMain.handle('save_report', async (_event, { reportData, defaultName }) => {
         <tr><td>Best Reflection</td><td>#${d.bestReflection}</td></tr>
     </table>
 </div>
+
+${dimRows ? `
+<div class="section">
+    <h2>Dimensional Analysis</h2>
+    <table class="dim-table">
+        <thead><tr>
+            <th>Axis</th><th>Nominal</th><th>Measured</th>
+            <th>Error</th><th>Parallelism</th><th>Flatness −/+</th>
+        </tr></thead>
+        <tbody>${dimRows}</tbody>
+    </table>
+</div>
+` : ''}
 
 <div class="footer">
     QA3D — Quality Assurance 3D &bull; Defense POW/MIA Accounting Agency

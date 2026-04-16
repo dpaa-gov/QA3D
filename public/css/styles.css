@@ -99,8 +99,8 @@ body {
 }
 
 .left-panel {
-    width: 320px;
-    min-width: 320px;
+    width: 380px;
+    min-width: 380px;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -127,8 +127,10 @@ body {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1.5px;
-    color: var(--text-muted);
+    color: var(--accent);
     margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--accent);
 }
 
 /* ── Inputs ───────────────────────────────────── */
@@ -162,18 +164,30 @@ body {
     cursor: pointer;
 }
 
-.input-group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
+.dim-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
 }
 
-.input-group label {
-    width: 20px;
+.dim-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.dim-cell label {
     font-weight: 600;
-    font-size: 13px;
+    font-size: 11px;
     color: var(--accent);
+    white-space: nowrap;
+}
+
+.input-suffix {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-left: -4px;
 }
 
 .label-hint {
@@ -183,15 +197,17 @@ body {
 }
 
 .dim-input {
-    flex: 1;
-    padding: 8px 10px;
+    width: 100%;
+    min-width: 0;
+    padding: 5px 6px;
     background: var(--bg-input);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     color: var(--text-primary);
-    font-size: 13px;
+    font-size: 12px;
     -moz-appearance: textfield;
     appearance: textfield;
+    box-sizing: border-box;
 }
 
 .dim-input:focus {
@@ -517,6 +533,73 @@ body {
 .viz-select:focus {
     outline: none;
     border-color: var(--accent);
+}
+
+/* ── Dimensional Analysis Table ──────────────── */
+.dim-analysis-section {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--accent);
+}
+
+.dim-analysis-section h4 {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    margin-bottom: 8px;
+}
+
+.dim-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+.dim-table th {
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 4px 5px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+.dim-table th:not(:first-child) {
+    text-align: right;
+}
+
+.dim-table td {
+    padding: 4px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+}
+
+.dim-table td:first-child {
+    font-family: inherit;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.dim-table td:not(:first-child) {
+    text-align: right;
+    color: var(--text-primary);
+}
+
+.dim-table tr + tr td {
+    border-top: 1px solid var(--border);
+}
+
+.dim-error-pos {
+    color: var(--warning) !important;
+}
+
+.dim-error-neg {
+    color: #60a5fa !important;
 }
 
 /* ── Utilities ────────────────────────────────── */
