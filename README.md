@@ -241,6 +241,7 @@ Lynch, J.J. 2026 QA3D. Quality Assurance 3D. Version 1.2.0. Defense POW/MIA Acco
 | Issue | Status | Details |
 |-------|--------|---------|
 | Compiled app crashes on Julia 1.12 | **Open — upstream bug** | PackageCompiler `create_app` bundles built with Julia 1.12 crash on startup. **Workaround**: build with Julia 1.11.x. See [PackageCompiler.jl #989](https://github.com/JuliaLang/PackageCompiler.jl/issues/989). |
+| Axis Mapping for Perfect Cubes | **Limitation** | The dimensional analysis maps PCA axes to user-input dimensions by sorting their lengths. If scanning a perfect cube (e.g., 20x20x20mm), the sorting cannot distinguish the axes, resulting in arbitrary X/Y/Z labels. **Workaround**: Always use an asymmetrical calibration artifact (like a 1-2-3 block) for scanner QA. |
 
 ## License
 
